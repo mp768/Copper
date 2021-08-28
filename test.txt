@@ -1,0 +1,17 @@
+var hello: string = "Hello World!";
+
+func fib(n: int): int {
+    if n <= 1 {
+        return n;
+    } else {
+        return fib(n - 1) + fib(n-2);
+    }
+}
+
+// This is a comment.
+// Wow!
+print(fib(8) + "\n");
+
+for i: int = 0; i < 5; i = i + 1 {
+    print(i + "\n");
+}
