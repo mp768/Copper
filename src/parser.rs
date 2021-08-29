@@ -13,6 +13,7 @@ pub enum AstExpr {
     Unary(Token, Box<AstExpr>),
     Variable(String),
     Assign(String, Box<AstExpr>),
+    AssignByOp(String, Token, Box<AstExpr>),
     Call(String, Vec<AstExpr>),
     Block(Vec<AstStmt>),
 }
@@ -76,21 +77,14 @@ impl CopperParser {
     fn advance(&mut self) -> Option<Token> {
         self.previous_token = self.current_token.clone();
         self.current_token = self.current_lexer.next();
-        self.current_lexeme = String::from(self.current_lexer.slice());
+        self.current_lexeme = self.current_lexer.slice();
+        self.current_line = self.current_lexer.line;
 
         //println!("Advance: 
         //        - Previous {:?}
         //        - Current {:?}
         //        - Current Lexeme {}", self.previous_token, self.current_token, self.current_lexeme);
 
-        while unwrap_ast!(self.current_token.clone()) == Token::NewLine {
-            self.current_line += 1;
-            self.advance();
-        }
-
-        while unwrap_ast!(self.current_token.clone()) == Token::Comment {
-            self.advance();
-        }
 
         return self.previous_token.clone();
     }
@@ -150,6 +144,7 @@ impl CopperParser {
 
             Token::Int(x) => return Some(AstExpr::Literal(Value::Int(x))),
             Token::Uint(x) => return Some(AstExpr::Literal(Value::Uint(x))),
+            Token::Decimal(x) => return Some(AstExpr::Literal(Value::Decimal(x))),
             Token::Str(x) => return Some(AstExpr::Literal(Value::Str(x))),
 
             Token::Identifer(name) => return Some(AstExpr::Variable(name)),
@@ -296,8 +291,25 @@ impl CopperParser {
         return Some(expr);
     }
 
-    fn assignment_expr(&mut self) -> Option<AstExpr> {
+    fn assignment_by_op_expr(&mut self) -> Option<AstExpr> {
         let expr = unwrap_ast!(self.or_expr());
+
+        if self.match_tokens(&[Token::PlusEqual, Token::MinusEqual, Token::StarEqual, Token::SlashEqual]) {
+            let op = unwrap_ast!(self.peek_previous());
+            let value = unwrap_ast!(self.assignment_expr());
+
+            if let AstExpr::Variable(name) = expr {
+                return Some(AstExpr::AssignByOp(name, op, Box::new(value)));
+            }
+
+            self.report_error("Invalid assignment");
+        }
+
+        return Some(expr);
+    }
+
+    fn assignment_expr(&mut self) -> Option<AstExpr> {
+        let expr = unwrap_ast!(self.assignment_by_op_expr());
 
         if self.match_tokens(&[Token::Equal]) {
             let value = unwrap_ast!(self.assignment_expr());
@@ -410,20 +422,24 @@ impl CopperParser {
 
         consume!(self, Token::RightParen, "Expected ')' after parameters");
 
-        consume!(self, Token::Colon, "Expected ':' before function return type");
+        let mut ctype = ClassType::Any;
 
-        let ctype = match unwrap_ast!(self.advance()) {
-            Token::TypeBool => ClassType::Bool,
-            Token::TypeAny => ClassType::Any,
-            Token::TypeDecimal => ClassType::Decimal,
-            Token::TypeUint => ClassType::Uint,
-            Token::TypeInt => ClassType::Int,
-            Token::TypeString => ClassType::Str,
-            _ => {
-                self.report_error("Expected a type identifer");
-                return None;
-            }
-        };
+        if self.match_tokens(&[Token::Colon]) {
+            //consume!(self, Token::Colon, "Expected ':' before function return type");
+
+            ctype = match unwrap_ast!(self.advance()) {
+                Token::TypeBool => ClassType::Bool,
+                Token::TypeAny => ClassType::Any,
+                Token::TypeDecimal => ClassType::Decimal,
+                Token::TypeUint => ClassType::Uint,
+                Token::TypeInt => ClassType::Int,
+                Token::TypeString => ClassType::Str,
+                _ => {
+                    self.report_error("Expected a type identifer");
+                    return None;
+                }
+            };
+        }
 
         consume!(self, Token::LeftBrace, format!("Expected '{{' before {} body", ftype).deref());
         let block = unwrap_ast!(self.block());
@@ -566,6 +582,8 @@ impl CopperParser {
             },
         };
 
+        unwrap_ast!(self.current_token.clone());
+
         return self.declaration_stmt();
     }
 
@@ -600,6 +618,7 @@ impl fmt::Display for AstExpr {
             AstExpr::Unary(op, b) => write!(f, "{:?} => {}", op, b),
             AstExpr::Variable(name) => write!(f, "{}", name),
             AstExpr::Assign(name, value) => write!(f, "{} = {}", name, value),
+            AstExpr::AssignByOp(name, op, value) => write!(f, "{} {} {}", name, op, value),
             AstExpr::Call(name, arguments) => {
                 write!(f, "{}(", name)?;
 

@@ -97,15 +97,15 @@ impl VM {
     pub fn interpret(&mut self) {
         let debugging = false;
         let debug_memory = false;
-
-        self.call_stack.push(Value::Int(0));
-        self.call_stack.push(Value::Int(0));
-        self.call_stack.push(Value::Int(0));
-        self.call_stack.clear();
+        let debug_scope = false;
         
         loop {
             if debug_memory && self.stack.len() % 1000 == 0 {
                 println!("Current amount of values on stack: {}", self.stack.len());
+            }
+
+            if debug_scope {
+                println!("Current Scope: {}", self.environment.current_scope);
             }
 
             if debugging {
@@ -141,7 +141,9 @@ impl VM {
                 OpCode::Return => {
                     if self.function_jump_back.len() != 0 {
                         self.idx = self.function_jump_back.pop().unwrap();
-                        self.environment.remove_from_scope(self.function_starting_scope.pop().unwrap());
+                        let jmp_back = self.function_starting_scope.pop().unwrap();
+                        self.environment.remove_from_scope(jmp_back);
+                        self.environment.current_scope = jmp_back - 1;
                         
                         let ctype = self.function_return_types.pop().unwrap();
                         
@@ -169,7 +171,7 @@ impl VM {
                             },
                         }
                     } else {
-                        panic!("Cannot return out of a function.");
+                        panic!("Cannot return out of the script, only in function.");
                     }
                 },
                 OpCode::EndScript => {
@@ -209,7 +211,7 @@ impl VM {
                             }
 
                             self.function_jump_back.push(self.idx);
-                            self.function_starting_scope.push(self.environment.current_scope + 1);
+                            self.function_starting_scope.push(self.environment.current_scope+1);
                             self.function_return_types.push(ctype);
 
                             self.idx = bytecode_pos;
@@ -338,11 +340,11 @@ impl VM {
                     self.environment.current_scope += 1;
                 },
                 OpCode::EndScope => {
+                    self.environment.remove_from_scope(self.environment.current_scope);
+
                     if self.environment.current_scope != 0 {
                         self.environment.current_scope -= 1;
                     }
-                    
-                    self.environment.remove_from_scope(self.environment.current_scope + 1);
                 },
             }
         }

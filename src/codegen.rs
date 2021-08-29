@@ -35,6 +35,19 @@ impl CopperGen {
                 self.generate_expr(*expr);
                 self.chunk.write(OpCode::Assign(name), self.current_line);
             },
+            AstExpr::AssignByOp(name, op, expr) => {
+                self.chunk.write_load(name.clone(), self.current_line);
+                self.generate_expr(*expr);
+
+                match op {
+                    Token::PlusEqual => self.chunk.write(OpCode::Add, self.current_line), 
+                    Token::MinusEqual => self.chunk.write(OpCode::Sub, self.current_line), 
+                    Token::StarEqual => self.chunk.write(OpCode::Mul, self.current_line), 
+                    Token::SlashEqual => self.chunk.write(OpCode::Div, self.current_line), 
+                    _ => panic!("Expected an operator for assigning"),
+                }
+                self.chunk.write(OpCode::Assign(name), self.current_line);
+            }
             AstExpr::Call(name, arguments) => self.generate_call_expr(name, arguments),
             AstExpr::Block(stmts) => {
                 self.chunk.write(OpCode::StartScope, self.current_line);
@@ -66,8 +79,11 @@ impl CopperGen {
     }
 
     fn generate_call_expr(&mut self, name: String, arguments: Vec<AstExpr>) {
-        for i in arguments {
+        for i in arguments.clone() {
             self.generate_expr(i);
+        }
+
+        for _ in arguments {
             self.chunk.write(OpCode::PopToCall, self.current_line);
         }
 
@@ -123,7 +139,7 @@ impl CopperGen {
                     self.generate_stmt(*stmt);
                 }
 
-                self.patch_if_false_jmp(self.chunk.code.len(), else_jmp);
+                self.patch_jmp(self.chunk.code.len(), else_jmp);
             },
             AstStmt::While(condition, body) => {
                 let beginning = self.chunk.code.len();

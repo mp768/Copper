@@ -26,9 +26,13 @@ pub enum Token {
 
     Comma, 
     Plus,
+    PlusEqual,
     Minus,
+    MinusEqual,
     Star,
+    StarEqual,
     Slash,
+    SlashEqual,
     Dot,
     Semicolon,
 
@@ -84,6 +88,7 @@ macro_rules! two_wide_token {
 
 pub struct Lexer {
     source: String,
+    pub line: usize,
     start: usize,
     end: usize,
 }
@@ -115,7 +120,7 @@ impl Lexer {
     fn parse_string(&mut self) -> Option<Token> {
         let mut contents: String = String::new();
 
-        while self.peek() != "\"" {
+        while self.peek() != "\"" && !self.at_end() {
             if self.peek() == "\\" {
                 match self.peek_next() {
                     "\"" => contents.push('\"'),
@@ -133,7 +138,7 @@ impl Lexer {
             self.end += 1;
         }
         
-        if self.peek() != "\"" {
+        if self.at_end() {
             return Some(Token::ERROR);
         }
         self.end += 1;
@@ -142,7 +147,7 @@ impl Lexer {
     }
     
     fn parse_identifer(&mut self) -> Option<Token> {
-        while self.peek().chars().all(|x| x.is_alphanumeric()) {
+        while self.peek().chars().all(|x| x.is_alphanumeric() || x == '_') {
             self.end += 1;
         }
 
@@ -203,69 +208,95 @@ impl Lexer {
         self.end += 1;
 
         let mut char = &self.source[self.start..self.end];
-        loop {
             if self.at_end() {
                 return None
             }
 
+        let mut in_loop: usize = 0;
+
+        while !self.at_end() {
+            if in_loop > 1000 {
+                return None;
+            }
+
+            in_loop += 1;
+
             match char {
-                "=" => two_wide_token!(self, "=", Token::Equal, Token::EqualEqual),
-                "!" => two_wide_token!(self, "=", Token::Not, Token::NotEqual),
-                ">" => two_wide_token!(self, "=", Token::Greater, Token::GreaterEqual),
-                "<" => two_wide_token!(self, "=", Token::Less, Token::LessEqual),
-                ":" => two_wide_token!(self, "=", Token::Colon, Token::ColonEqual),
-                ";" => return Some(Token::Semicolon),
-                "," => return Some(Token::Comma),
-                "." => return Some(Token::Dot),
-                "/" => if self.peek() != "/" { 
-                    return Some(Token::Slash)
-                } else {
-                    while self.peek() != "\n" {
-                        self.end += 1;
-                    }
-                    return Some(Token::Comment);
-                },
-                "*" => return Some(Token::Star),
-                "+" => return Some(Token::Plus),
-                "-" => return Some(Token::Minus),
-                "(" => return Some(Token::LeftParen),
-                ")" => return Some(Token::RightParen),
-                "{" => return Some(Token::LeftBrace),
-                "}" => return Some(Token::RightBrace),
-                "[" => return Some(Token::LeftBracket),
-                "]" => return Some(Token::RightBracket),
-                "\"" => return self.parse_string(),
-                "\n" => return Some(Token::NewLine),
                 " " | "\t" | "\r" => {
                     self.start = self.end;
                     self.end += 1;
                     char = &self.source[self.start..self.end];
-                },
-                _ => {
-                    if char.chars().all(|x| x.is_alphabetic()) {
-                        return self.parse_identifer();
-                    } else if char.chars().all(|x| x.is_numeric()) {
-                        return self.parse_numeric();
+                }
+                "/" => if self.peek() == "/" {
+                    while self.peek() != "\n" && !self.at_end() {
+                        self.end += 1;
+                    }
+
+                    if self.at_end() {
+                        return None;
                     }
 
                     self.end += 1;
+                    self.start = self.end;
+                    self.end += 1;
                     char = &self.source[self.start..self.end];
-
-                    match char {
-                        "==" => return Some(Token::EqualEqual),
-                        "!=" => return Some(Token::NotEqual),
-                        ">=" => return Some(Token::GreaterEqual),
-                        ":=" => return Some(Token::ColonEqual),
-                        "&&" => return Some(Token::CmpAnd),
-                        "||" => return Some(Token::CmpOr),
-                        _ => break,
-                    }
-                },
+                } else {
+                    char = "/";
+                    break;
+                }
+                "\n" => {
+                    self.line += 1;
+                    self.start = self.end;
+                    self.end += 1;
+                    char = &self.source[self.start..self.end];
+                }
+                _ => break,
             }
         }
 
+        if self.at_end() {
+            return None;
+        }
 
-        return Some(Token::ERROR);
+        match char {
+            "=" => two_wide_token!(self, "=", Token::Equal, Token::EqualEqual),
+            "!" => two_wide_token!(self, "=", Token::Not, Token::NotEqual),
+            ">" => two_wide_token!(self, "=", Token::Greater, Token::GreaterEqual),
+            "<" => two_wide_token!(self, "=", Token::Less, Token::LessEqual),
+            ":" => two_wide_token!(self, "=", Token::Colon, Token::ColonEqual),
+            ";" => return Some(Token::Semicolon),
+            "," => return Some(Token::Comma),
+            "." => return Some(Token::Dot),
+            "/" => two_wide_token!(self, "=", Token::Slash, Token::SlashEqual),
+            "*" => two_wide_token!(self, "=", Token::Star, Token::StarEqual),
+            "+" => two_wide_token!(self, "=", Token::Plus, Token::PlusEqual),
+            "-" => two_wide_token!(self, "=", Token::Minus, Token::MinusEqual),
+            "(" => return Some(Token::LeftParen),
+            ")" => return Some(Token::RightParen),
+            "{" => return Some(Token::LeftBrace),
+            "}" => return Some(Token::RightBrace),
+            "[" => return Some(Token::LeftBracket),
+            "]" => return Some(Token::RightBracket),
+            "\"" => return self.parse_string(),
+            _ => {
+                if char.chars().all(|x| x.is_alphabetic() || x == '_') {
+                    return self.parse_identifer();
+                } else if char.chars().all(|x| x.is_numeric()) {
+                    return self.parse_numeric();
+                }
+
+                self.end += 1;
+                char = &self.source[self.start..self.end];
+
+                match char {
+                    "&&" => return Some(Token::CmpAnd),
+                    "||" => return Some(Token::CmpOr),
+                    _ => return Some(Token::ERROR),
+                }
+            },
+        }
+        
+        
     }
 
     pub fn slice(&self) -> String {
@@ -277,6 +308,7 @@ impl Lexer {
         source.push(' ');
         Self {
             source,
+            line: 0,
             start: 0,
             end: 0,
         }
@@ -302,9 +334,13 @@ impl fmt::Display for Token {
             Token::RightBracket => todo!(),
             Token::Comma => todo!(),
             Token::Plus => write!(f, "+"),
+            Token::PlusEqual => write!(f, "+="),
             Token::Minus => write!(f, "-"),
+            Token::MinusEqual => write!(f, "-="),
             Token::Star => write!(f, "*"),
+            Token::StarEqual => write!(f, "*="),
             Token::Slash => write!(f, "/"),
+            Token::SlashEqual => write!(f, "/="),
             Token::Dot => write!(f, "."),
             Token::Semicolon => todo!(),
             Token::Func => todo!(),

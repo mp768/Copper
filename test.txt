@@ -1,17 +1,46 @@
-var hello: string = "Hello World!";
+// This is a comment, wow!
 
+// these are the basic types:
+// any - can accept "any" value
+// int - can accept whole numbers
+// uint - can only accept whole numbers that are positive
+// decimal - can accept any number almost
+// string - can accept "messages like this"
+// bool - has only two values, true or false 
+
+// This is an example of a looping function.
 func fib(n: int): int {
     if n <= 1 {
         return n;
     } else {
-        return fib(n - 1) + fib(n-2);
+        return add(fib(n-1), fib(n-2));
     }
 }
 
-// This is a comment.
-// Wow!
-print(fib(8) + "\n");
+func add(a: any, b: any): int {
+    // will try to convert to an int
+    return a + b;
+}
 
-for i: int = 0; i < 5; i = i + 1 {
-    print(i + "\n");
+println(add(5, 6.7));
+
+// the higher the number, the slower this function will take.
+println(fib(8));
+
+for i; i <= 10002003040; i *= 5 {
+    i += 1;
+
+    var val: int;
+
+    if i > 16 {
+        val = 16;
+    } else if i > 8 {
+        val = 8;
+    } else {
+        val = i;
+    }
+
+    println("Val : " + val);
+    println("Val 4 : " + val / 4);
+    println(fib(val));
 }

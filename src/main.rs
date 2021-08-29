@@ -19,44 +19,41 @@ fn copper_print(values: Vec<Value>) -> Value {
     return Value::None;
 }
 
+fn copper_println(values: Vec<Value>) -> Value {
+    let val = values[0].clone();
+    val.println();
+
+    return Value::None;
+}
+
 fn main() {
-    //let mut scanner = Token::lexer("(if) {else} [for] 5 / 8 * 9 - 100000 + -6 9u -93.02 82.1 \"\tHello There fellow neightbor 5456!\n\" \"\" ahello a78");
+    let mut cmd_args: Vec<String> = std::env::args().collect();
+    cmd_args.remove(0);
 
-    let mut chunk = Chunk::new();
+    if cmd_args.len() == 0 {
+        //println!("copper [file names...]");
+        //return;
+    }
 
-    chunk.write_constant(Value::Decimal(9.342), 0);
-    chunk.write_store(String::from("Hello"), ClassType::Decimal, 0);
-    chunk.write_load(String::from("Hello"), 0);
-    //chunk.write(OpCode::Negate, 0);
-    chunk.write_constant(Value::Int(5), 1);
-    chunk.write(OpCode::StartScope, 1);
-    chunk.write_store(String::from("Number"), ClassType::Any,  1);
-    chunk.write_load(String::from("Number"), 1);
-    chunk.write(OpCode::Add, 1);
-    chunk.write(OpCode::EndScope, 1);
-    chunk.write_constant(Value::Uint(6), 1);
-    chunk.write_constant(Value::Int(5), 1);
-    chunk.write(OpCode::CmpGreater, 1);
-    chunk.write_jmp_if_false(0, 1);
-    chunk.write(OpCode::EndScript, 1);
-
-    //schunk.disassemble();
 
     let mut gen = CopperGen::new();
 
-    let mut files: Vec<String> = Vec::new();
-    files.push(String::from("test.txt"));
-
-    let mut new_chunk = gen.generate_chunk(files);
+    let mut new_chunk = gen.generate_chunk(vec!["test.txt".to_string()]);
 
     new_chunk.bind_native_function("print".to_string(), 1, &copper_print);
+    new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
 
     new_chunk.disassemble();
 
     let mut vm = VM::new(&new_chunk);
 
-    vm.interpret();
+    //let mut parser = CopperParser::new("/".to_string());
+    //
+    //while let Some(x) = parser.parse() {
+    //    println!("{:?}", x);
+    //}
 
+    vm.interpret();
 
     //let mut c = scanner.next();
     //while c != None {

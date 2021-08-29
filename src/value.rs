@@ -50,7 +50,7 @@ impl Value {
             Self::Decimal(x) => print!("{}", x),
             Self::Bool(x) => print!("{}", x),
             Self::Str(x) => print!("{}", x),
-            Self::None => print!("None"),
+            Self::None => print!("NONE"),
             //_ => print!("No Value.")
         }
     }
