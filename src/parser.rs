@@ -7,6 +7,7 @@ use crate::{tokens::{Lexer, Token}, value::{ClassType, Value}};
 pub enum AstExpr {
     Nothing,
     Binary(Box<AstExpr>, Token, Box<AstExpr>),
+    Ternary(Box<AstExpr>, Box<AstExpr>, Box<AstExpr>),
     Group(Box<AstExpr>),
 
     Literal(Value),
@@ -157,6 +158,12 @@ impl CopperParser {
                 return Some(AstExpr::Group(Box::new(expr)));
             }
 
+            Token::LeftBrace => {
+                let expr = unwrap_ast!(self.block());
+
+                return Some(expr);
+            }
+
             _ => {
                 self.report_error("Expected an expression");
                 return None;
@@ -164,8 +171,8 @@ impl CopperParser {
         }
     }
 
-    fn finish_call_expr(&mut self, Callee: AstExpr) -> Option<AstExpr> {
-        let name = if let AstExpr::Variable(x) = Callee {
+    fn finish_call_expr(&mut self, callee: AstExpr) -> Option<AstExpr> {
+        let name = if let AstExpr::Variable(x) = callee {
             x
         } else {
             self.report_error("Expected a identifer for calling a function.");
@@ -291,8 +298,22 @@ impl CopperParser {
         return Some(expr);
     }
 
-    fn assignment_by_op_expr(&mut self) -> Option<AstExpr> {
+    fn ternary_expr(&mut self) -> Option<AstExpr> {
         let expr = unwrap_ast!(self.or_expr());
+
+        while self.match_tokens(&[Token::QuestionMark]) {
+            let true_expr = unwrap_ast!(self.ternary_expr());
+            consume!(self, Token::Colon, "Expected ':' before false expr for ternary");
+            let false_expr = unwrap_ast!(self.ternary_expr());
+
+            return Some(AstExpr::Ternary(Box::new(expr), Box::new(true_expr), Box::new(false_expr)));
+        }
+
+        return Some(expr);
+    }
+
+    fn assignment_by_op_expr(&mut self) -> Option<AstExpr> {
+        let expr = unwrap_ast!(self.ternary_expr());
 
         if self.match_tokens(&[Token::PlusEqual, Token::MinusEqual, Token::StarEqual, Token::SlashEqual]) {
             let op = unwrap_ast!(self.peek_previous());
@@ -363,6 +384,7 @@ impl CopperParser {
 
         if self.match_tokens(&[Token::Equal]) {
             expr = unwrap_ast!(self.expression());
+            println!("GOT EQUAL: {:?}", expr);
         }
 
         consume!(self, Token::Semicolon, "Expected ';' after variable declaration");
@@ -632,6 +654,9 @@ impl fmt::Display for AstExpr {
 
                 write!(f, ")")
             },
+            AstExpr::Ternary(condition, true_expr, false_expr) => {
+                write!(f, "{} ? {} : {}", condition, true_expr, false_expr)
+            }
             AstExpr::Block(stmts) => {
                 write!(f, "{{\n")?;
 

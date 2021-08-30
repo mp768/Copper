@@ -16,6 +16,7 @@ pub enum Token {
     Else,
     For,
     Return,
+    QuestionMark,
 
     LeftParen,
     RightParen,
@@ -271,6 +272,7 @@ impl Lexer {
             "*" => two_wide_token!(self, "=", Token::Star, Token::StarEqual),
             "+" => two_wide_token!(self, "=", Token::Plus, Token::PlusEqual),
             "-" => two_wide_token!(self, "=", Token::Minus, Token::MinusEqual),
+            "?" => return Some(Token::QuestionMark),
             "(" => return Some(Token::LeftParen),
             ")" => return Some(Token::RightParen),
             "{" => return Some(Token::LeftBrace),
@@ -361,6 +363,7 @@ impl fmt::Display for Token {
             Token::CmpFalse => todo!(),
             Token::Var => todo!(),
             Token::Identifer(_) => todo!(),
+            Token::QuestionMark => todo!(),
             Token::TypeInt => todo!(),
             Token::TypeUint => todo!(),
             Token::TypeDecimal => todo!(),

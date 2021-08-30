@@ -2,13 +2,14 @@ use std::ops::Deref;
 
 use crate::parser::{AstStmt, AstExpr};
 use crate::tokens::Token;
-use crate::value::Value;
+use crate::value::{ClassType, Value};
 use crate::{CopperParser, chunk::{Chunk, OpCode}};
 
 pub struct CopperGen {
     pub parser: CopperParser,
     pub current_line: usize,
     pub chunk: Chunk,
+    block_increment: usize,
 }
 
 impl CopperGen {
@@ -20,6 +21,21 @@ impl CopperGen {
                 self.generate_expr(*b);
                 self.generate_op(op);
             },
+            AstExpr::Ternary(condition, true_expr, false_expr) => {
+                self.generate_expr(*condition);
+
+                let jmp_over = self.generate_patch_jmp();
+
+                self.generate_expr(*true_expr);
+
+                let jmp_over_false = self.generate_patch_jmp();
+
+                self.patch_if_false_jmp(self.chunk.code.len(), jmp_over);
+
+                self.generate_expr(*false_expr);
+
+                self.patch_jmp(self.chunk.code.len(), jmp_over_false);
+            }
             AstExpr::Group(expr) => self.generate_expr(*expr),
             AstExpr::Literal(val) => self.chunk.write_constant(val, self.current_line),
             AstExpr::Unary(op, expr) => {
@@ -32,12 +48,21 @@ impl CopperGen {
             },
             AstExpr::Variable(name) => self.chunk.write(OpCode::Load(name), self.current_line),
             AstExpr::Assign(name, expr) => {
-                self.generate_expr(*expr);
+                if let AstExpr::Block(_) = *expr {
+                    self.generate_block_function(*expr);
+                } else {
+                    self.generate_expr(*expr);
+                }
                 self.chunk.write(OpCode::Assign(name), self.current_line);
             },
             AstExpr::AssignByOp(name, op, expr) => {
                 self.chunk.write_load(name.clone(), self.current_line);
-                self.generate_expr(*expr);
+
+                if let AstExpr::Block(_) = *expr {
+                    self.generate_block_function(*expr);
+                } else {
+                    self.generate_expr(*expr);
+                }
 
                 match op {
                     Token::PlusEqual => self.chunk.write(OpCode::Add, self.current_line), 
@@ -78,6 +103,24 @@ impl CopperGen {
         }
     }
 
+    fn generate_block_function(&mut self, block: AstExpr) {
+        let jmp_over = self.generate_patch_jmp();
+        self.chunk.bind_function(format!("@block_func:{}", self.block_increment), ClassType::Any, 0, self.chunk.code.len());
+        
+        self.chunk.write(OpCode::StartScope, self.current_line);
+
+        self.generate_expr(block);
+
+        self.chunk.write_constant(Value::None, self.current_line);
+        self.chunk.write(OpCode::Return, self.current_line);
+        
+        self.chunk.write(OpCode::EndScope, self.current_line);
+
+        self.patch_jmp(self.chunk.code.len(), jmp_over);
+        self.generate_call_expr(format!("@block_func:{}", self.block_increment), vec![]);
+        self.block_increment += 1;
+    }
+
     fn generate_call_expr(&mut self, name: String, arguments: Vec<AstExpr>) {
         for i in arguments.clone() {
             self.generate_expr(i);
@@ -94,11 +137,29 @@ impl CopperGen {
         match expr {
             AstExpr::Unary(_, _) => {},
             AstExpr::Literal(_) => {},
-            AstExpr::Binary(_, _, _) => {},
+            AstExpr::Binary(a, _, b) => {
+                self.blacklist_expr(*a);
+                self.blacklist_expr(*b);
+            },
             AstExpr::Group(expr) => self.generate_expr(*expr),
             AstExpr::Call(name, arguments) => {
                 self.generate_call_expr(name, arguments);
                 self.chunk.write(OpCode::Pop, self.current_line);
+            }
+            AstExpr::Ternary(condition, true_expr, false_expr)=> {
+                self.generate_expr(*condition);
+                
+                let jmp_over = self.generate_patch_jmp();
+
+                self.blacklist_expr(*true_expr);
+
+                let jmp_over_false = self.generate_patch_jmp();
+
+                self.patch_if_false_jmp(self.chunk.code.len(), jmp_over);
+
+                self.blacklist_expr(*false_expr);
+
+                self.patch_jmp(self.chunk.code.len(), jmp_over_false);
             }
             _ => self.generate_expr(expr),
         }
@@ -121,11 +182,20 @@ impl CopperGen {
         match stmt {
             AstStmt::Expr(expr) => self.blacklist_expr(expr),
             AstStmt::Declaration(name, ctype, expr) => {
-                self.generate_expr(expr);
+                if let AstExpr::Block(_) = expr {
+                    self.generate_block_function(expr);
+                } else {
+                    self.generate_expr(expr);
+                }
+                
                 self.chunk.write_store(name, ctype, self.current_line);
             },
             AstStmt::InferDeclaration(name, expr) => {
-                self.generate_expr(expr);
+                if let AstExpr::Block(_) = expr {
+                    self.generate_block_function(expr);
+                } else {
+                    self.generate_expr(expr);
+                }
                 self.chunk.write_store_infer(name, self.current_line);
             },
             AstStmt::If(condition, then_branch, else_branch) => {
@@ -213,6 +283,7 @@ impl CopperGen {
             parser: CopperParser::new("".to_string()),
             current_line: 0,
             chunk: Chunk::new(),
+            block_increment: 0,
         }
     }
 }

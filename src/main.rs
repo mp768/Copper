@@ -43,7 +43,7 @@ fn main() {
     new_chunk.bind_native_function("print".to_string(), 1, &copper_print);
     new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
 
-    new_chunk.disassemble();
+    //new_chunk.disassemble();
 
     let mut vm = VM::new(&new_chunk);
 
