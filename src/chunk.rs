@@ -13,6 +13,7 @@ pub enum OpCode {
     Div,
 
     CallFunc(String),
+    TransformToType(ClassType),
 
     CmpLess,
     CmpLessEqual,
@@ -97,6 +98,10 @@ impl Chunk {
         self.write(OpCode::CallFunc(name), line);
     }
 
+    pub fn transform_to_type(&mut self, ctype: ClassType, line: usize) {
+        self.write(OpCode::TransformToType(ctype), line);
+    } 
+
     pub fn bind_function(&mut self, name: String,  ctype: ClassType, arg_count: usize, bytecode_position: usize) {
         self.functions.add_function(name, ctype, arg_count, bytecode_position);
     }
@@ -145,6 +150,7 @@ impl Chunk {
             OpCode::StartScope => print!("start scope"),
             OpCode::Not => print!("not"),
             OpCode::EndScope => print!("end scope"),
+            OpCode::TransformToType(c) => print!("transform to {:?}", c),
             _ => println!("[Unknown opcode]"),
         }
     }

@@ -1,11 +1,13 @@
+use std::{num::ParseIntError, string::ParseError};
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
     None,
     Uint(u64),
     Int(i64),
     Decimal(f64),
-    Bool(bool),
     Str(String),
+    Bool(bool),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -79,12 +81,12 @@ impl Value {
 
     pub fn int_s(&self) -> i64 {
         match self {
-            Self::Int(x) => return *x,
-            Self::Uint(x) => return *x as i64,
-            Self::Decimal(x) => return *x as i64,
-            Self::Bool(_) => panic!("Cannot convert a value of 'bool' to 'int'."),
-            Self::Str(_) => panic!("Cannot convert a value of 'string' to 'int'."),
-            Self::None => 0,
+            Value::Int(x) => return *x,
+            Value::Uint(x) => return *x as i64,
+            Value::Decimal(x) => return *x as i64,
+            Value::Bool(_) => panic!("Cannot convert a value of 'bool' to 'int'."),
+            Value::Str(x) => return x.trim().parse().unwrap(),
+            Value::None => 0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
     }
@@ -95,7 +97,7 @@ impl Value {
             Self::Uint(x) => return *x,
             Self::Decimal(x) => return *x as u64,
             Self::Bool(_) => panic!("Cannot convert a value of 'bool' to 'uint'."),
-            Self::Str(_) => panic!("Cannot convert a value of 'string' to 'uint'."),
+            Self::Str(x) => return x.trim().parse().unwrap(),
             Self::None => 0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -107,7 +109,7 @@ impl Value {
             Self::Uint(x) => return *x as f64,
             Self::Decimal(x) => return *x,
             Self::Bool(_) => panic!("Cannot convert a value of 'bool' to 'decimal'."),
-            Self::Str(_) => panic!("Cannot convert a value of 'string' to 'decimal'."),
+            Self::Str(x) => return x.trim().parse().unwrap(),
             Self::None => 0.0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -131,7 +133,7 @@ impl Value {
             Self::Uint(_) => panic!("Cannot convert a value of 'uint' to 'bool'."),
             Self::Decimal(_) => panic!("Cannot convert a value of 'decimal' to 'bool'."),
             Self::Bool(x) => return *x,
-            Self::Str(_) => panic!("Cannot convert a value of 'string' to 'bool'."),
+            Self::Str(x) => return x.trim().parse().unwrap(),
             Self::None => false,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }

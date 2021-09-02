@@ -16,6 +16,21 @@ impl CopperGen {
     fn generate_expr(&mut self, expr: AstExpr) {
         match expr {
             AstExpr::Nothing => {},
+            AstExpr::TypeCall(ctype, expr) => {
+                self.generate_expr(*expr);
+
+                let ctype = match ctype {
+                    Token::TypeAny => ClassType::Any,
+                    Token::TypeInt => ClassType::Int,
+                    Token::TypeUint => ClassType::Uint,
+                    Token::TypeDecimal => ClassType::Decimal,
+                    Token::TypeString => ClassType::Str,
+                    Token::TypeBool => ClassType::Bool,
+                    _ => ClassType::Any,
+                };
+
+                self.chunk.transform_to_type(ctype, self.current_line);
+            }
             AstExpr::Binary(a, op, b) => {
                 self.generate_expr(*a);
                 self.generate_expr(*b);
@@ -123,7 +138,11 @@ impl CopperGen {
 
     fn generate_call_expr(&mut self, name: String, arguments: Vec<AstExpr>) {
         for i in arguments.clone() {
-            self.generate_expr(i);
+            if let AstExpr::Block(_) = i {
+                self.generate_block_function(i);
+            } else {
+                self.generate_expr(i);
+            }
         }
 
         for _ in arguments {

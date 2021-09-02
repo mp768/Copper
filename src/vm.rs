@@ -33,7 +33,7 @@ macro_rules! binary_compare {
         }
     };
 
-    (string, bool; $self:expr, $op:tt, $str:literal, $boolean:literal, $type:literal) => {
+    (string, bool; $self:expr, $op:tt, $type:literal) => {
         let (a, b, value_type) = $self.binary_op_vals();
         
         match value_type {
@@ -41,18 +41,10 @@ macro_rules! binary_compare {
             Value::Int(_) => $self.stack.push(Value::Bool(a.int_s() $op b.int_s())),
             Value::Decimal(_) => $self.stack.push(Value::Bool(a.decimal_s() $op b.decimal_s())),
             Value::Str(_) => {
-                if a == b && $str {
-                    $self.stack.push(Value::Bool(a.string_s() $op b.string_s()));
-                } else {
-                    panic!("Cannot compare for '{}' with 'string' type and another type that isn't a 'string'.", $type)
-                }
+                $self.stack.push(Value::Bool(a.string_s() $op b.string_s()));
             },
             Value::Bool(_) => {
-                if a == b && $boolean {
-                    $self.stack.push(Value::Bool(a.bool_s() $op b.bool_s()));
-                } else {
-                    panic!("Cannot compare for '{}' with 'bool' type and another type that isn't a 'bool'.", $type)
-                }
+                $self.stack.push(Value::Bool(a.bool_s() $op b.bool_s()));
             },
             Value::None => panic!("Cannot compare for '{}' with 'none' type.", $type),
         }
@@ -174,6 +166,17 @@ impl VM {
                         panic!("Cannot return out of the script, only in function.");
                     }
                 },
+                OpCode::TransformToType(ctype) => {
+                    let val = self.stack_pop();
+                    match ctype {
+                        ClassType::Any => self.stack.push(val),
+                        ClassType::Uint => self.stack.push(Value::Uint(val.uint_s())),
+                        ClassType::Int => self.stack.push(Value::Int(val.int_s())),
+                        ClassType::Decimal => self.stack.push(Value::Decimal(val.decimal_s())),
+                        ClassType::Str => self.stack.push(Value::Str(val.string_s())),
+                        ClassType::Bool => self.stack.push(Value::Bool(val.bool_s())),
+                    }
+                }
                 OpCode::EndScript => {
                     self.environment.entries.clear();
                     return;
@@ -245,38 +248,21 @@ impl VM {
                     binary_compare!(self, >=, "greater or equal");
                 },
                 OpCode::CmpEqual => {
-                    binary_compare!(string, bool; self, ==, true, true, "equal");
+                    binary_compare!(string, bool; self, ==, "equal");
                 },
                 OpCode::CmpNotEqual => {
-                    binary_compare!(string, bool; self, !=, true, false, "not equal");
+                    binary_compare!(string, bool; self, !=, "not equal");
                 },
                 OpCode::CmpAnd => {
-                    let (a, b, value_type) = self.binary_op_vals();
+                    let (a, b, _) = self.binary_op_vals();
 
-                    match value_type {
-                        Value::Bool(_) => {
-                            if a == b {
-                                self.stack.push(Value::Bool(a.bool_s() && b.bool_s()));
-                            } else {
-                                panic!("Cannot compare for 'and' with any other type except 'bool'");
-                            }
-                        },
-                        _ => panic!("Cannot compare for 'and' with any other type except 'bool'"),
-                    }
+                    self.stack.push(Value::Bool(a.bool_s() && b.bool_s()));
+                    
                 },
                 OpCode::CmpOr => {
-                    let (a, b, value_type) = self.binary_op_vals();
+                    let (a, b, _) = self.binary_op_vals();
 
-                    match value_type {
-                        Value::Bool(_) => {
-                            if a == b {
-                                self.stack.push(Value::Bool(a.bool_s() || b.bool_s()));
-                            } else {
-                                panic!("Cannot compare for 'or' with any other type except 'bool'");
-                            }
-                        },
-                        _ => panic!("Cannot compare for 'or' with any other type except 'bool'"),
-                    }
+                    self.stack.push(Value::Bool(a.bool_s() || b.bool_s()));
                 },
                 OpCode::Jmp(idx) => {
                     self.idx = idx;

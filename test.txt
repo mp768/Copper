@@ -41,20 +41,24 @@ y = {
 
 println("Y: " + y);
 
-for i; i <= 10002003040; i *= 5 {
-    i += 1;
-
-    var val: int = 0;
-
-    if i > 16 {
-        val = 16;
-    } else if i > 8 {
-        val = 8;
-    } else {
-        val = i;
-    }
-
-    println("Val : " + val);
-    println("Val 4 : " + val / 4);
-    println(fib(val));
+if 1 == 1 && true {
+    println("WOWO");
 }
+
+//for i; i <= 10002003040; i *= 5 {
+//    i += 1;
+//
+//    var val: decimal = 0;
+//
+//    if i > 16 {
+//        val = 16;
+//    } else if i > 8 {
+//        val = 8;
+//    } else {
+//        val = i;
+//    }
+//
+//    println("Val : " + val);
+//    println("Val 4 : " + val / 4);
+//    println(fib(val));
+//}

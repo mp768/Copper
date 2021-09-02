@@ -16,6 +16,7 @@ pub enum AstExpr {
     Assign(String, Box<AstExpr>),
     AssignByOp(String, Token, Box<AstExpr>),
     Call(String, Vec<AstExpr>),
+    TypeCall(Token, Box<AstExpr>),
     Block(Vec<AstStmt>),
 }
 
@@ -211,6 +212,18 @@ impl CopperParser {
         return Some(expr);
     }
 
+    fn type_call_expr(&mut self) -> Option<AstExpr> {
+        if self.match_tokens(&[Token::TypeAny, Token::TypeInt, Token::TypeUint, Token::TypeDecimal, Token::TypeString, Token::TypeBool]) {
+            let ctype = unwrap_ast!(self.peek_previous());
+            consume!(self, Token::LeftParen, "Expected '(' before type conversion");
+            let expr = unwrap_ast!(self.ternary_expr());
+            consume!(self, Token::RightParen, "Expected ')' after type conversion");
+            return Some(AstExpr::TypeCall(ctype, Box::new(expr)));
+        }
+
+        return self.call_expr();
+    }
+
     fn unary_expr(&mut self) -> Option<AstExpr> {
         if self.match_tokens(&[Token::Minus, Token::Not]) {
             let op = unwrap_ast!(self.peek_previous());
@@ -219,7 +232,7 @@ impl CopperParser {
             return Some(AstExpr::Unary(op, Box::new(right)));
         }
 
-        return self.call_expr();
+        return self.type_call_expr();
     }
 
     fn factor_expr(&mut self) -> Option<AstExpr> {
@@ -384,7 +397,6 @@ impl CopperParser {
 
         if self.match_tokens(&[Token::Equal]) {
             expr = unwrap_ast!(self.expression());
-            println!("GOT EQUAL: {:?}", expr);
         }
 
         consume!(self, Token::Semicolon, "Expected ';' after variable declaration");
@@ -640,6 +652,7 @@ impl fmt::Display for AstExpr {
             AstExpr::Unary(op, b) => write!(f, "{:?} => {}", op, b),
             AstExpr::Variable(name) => write!(f, "{}", name),
             AstExpr::Assign(name, value) => write!(f, "{} = {}", name, value),
+            AstExpr::TypeCall(ctype, expr) => write!(f, "{}({})", ctype, expr),
             AstExpr::AssignByOp(name, op, value) => write!(f, "{} {} {}", name, op, value),
             AstExpr::Call(name, arguments) => {
                 write!(f, "{}(", name)?;

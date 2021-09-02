@@ -6,10 +6,11 @@ pub mod environment;
 pub mod parser;
 pub mod codegen;
 
+use std::io::{Write, stdin, stdout};
+
 use codegen::CopperGen;
 use parser::CopperParser;
-use chunk::{Chunk, OpCode};
-use value::{Value, ClassType};
+use value::{Value};
 use vm::VM;
 
 fn copper_print(values: Vec<Value>) -> Value {
@@ -26,6 +27,38 @@ fn copper_println(values: Vec<Value>) -> Value {
     return Value::None;
 }
 
+fn copper_input(values: Vec<Value>) -> Value {
+    let val = values[0].clone();
+    val.print();
+    let _ = stdout().flush();
+
+    let mut input = String::new();
+
+    match stdin().read_line(&mut input) {
+        Ok(_) => {},
+        Err(err) => panic!("{}", err),
+    }
+
+    input = input.trim().to_string();
+
+    return Value::Str(input);
+}
+
+fn copper_inputln(values: Vec<Value>) -> Value {
+    let val = values[0].clone();
+    val.println();
+    let _ = stdout().flush();
+
+    let mut input = String::new();
+
+    match stdin().read_line(&mut input) {
+        Ok(_) => {},
+        Err(err) => panic!("{}", err),
+    }
+
+    return Value::Str(input);
+}
+
 fn main() {
     let mut cmd_args: Vec<String> = std::env::args().collect();
     cmd_args.remove(0);
@@ -33,15 +66,19 @@ fn main() {
     if cmd_args.len() == 0 {
         //println!("copper [file names...]");
         //return;
+        cmd_args.push(String::from("text_adventure_game.txt"));
+        cmd_args.push(String::from("text_adventure_lib.txt"));
     }
 
 
     let mut gen = CopperGen::new();
 
-    let mut new_chunk = gen.generate_chunk(vec!["test.txt".to_string()]);
+    let mut new_chunk = gen.generate_chunk(cmd_args);
 
     new_chunk.bind_native_function("print".to_string(), 1, &copper_print);
     new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
+    new_chunk.bind_native_function("input".to_string(), 1, &copper_input);
+    new_chunk.bind_native_function("inputln".to_string(), 1, &copper_inputln);
 
     //new_chunk.disassemble();
 

@@ -1,0 +1,42 @@
+var input = input("HE: ");
+println(input == 5);
+
+var s = two_choice_options("Kill Snake", "Save Snake", "The death of the snake makes you digusted", "The snake thanks you");
+
+if s == 1 {
+	println("because you killed the snake you've been cursed by the gods!");
+} else {
+	println("because you saved the snake you've been blessed by the gods!");
+}
+
+var s = three_choice_options("Kill Snake", "Save Snake", "Befriend Snake", "The death of the snake makes you digusted", "The snake thanks you", "You become best friends with the snake");
+
+if s == 1 {
+	println("because you killed the snake you've been cursed by the gods!");
+} else if s == 2 {
+	println("because you saved the snake you've been blessed by the gods!");
+} else {
+	println("because you befriended the snake, the snake has granted you invinciblity to poison!");
+}
+
+var p = blank_options("You are a ", "!", "Doctor", "Computer Scientist", "God");
+
+if p == 1 {
+	println("Wow, A Doctor can heal their allies!");
+} else if p == 2 {
+	println("Wow, A Computer Scientist can make new automation!");
+} else {
+	println("Wow, A God can destroy the whole universe!");
+}
+
+
+
+
+
+
+
+
+
+
+
+
