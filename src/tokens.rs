@@ -60,6 +60,7 @@ pub enum Token {
     CmpFalse,
 
     Var,
+    Import,
 
     Identifer(String),
 
@@ -87,6 +88,7 @@ macro_rules! two_wide_token {
     };
 }
 
+#[derive(Clone)]
 pub struct Lexer {
     source: String,
     pub line: usize,
@@ -173,6 +175,7 @@ impl Lexer {
             "string" => return Some(Token::TypeString),
             "any" => return Some(Token::TypeAny),
             "bool" => return Some(Token::TypeBool),
+            "import" => return Some(Token::Import),
             _ => return Some(Token::Identifer(identifer.to_string())),
         }
     }
@@ -373,6 +376,7 @@ impl fmt::Display for Token {
             Token::NewLine => todo!(),
             Token::Comment => todo!(),
             Token::ERROR => todo!(),
+            Token::Import => todo!(),
         }
     }
 }

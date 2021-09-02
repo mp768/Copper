@@ -1,5 +1,4 @@
-var input = input("HE: ");
-println(input == 5);
+import "text_adventure_lib.txt";
 
 var s = two_choice_options("Kill Snake", "Save Snake", "The death of the snake makes you digusted", "The snake thanks you");
 

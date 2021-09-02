@@ -29,6 +29,7 @@ pub enum AstStmt {
     While(AstExpr, AstExpr),
     Function(String, ClassType, Vec<String>, Vec<ClassType>, AstExpr),
     Return(Option<AstExpr>),
+    Import(AstExpr),
 }
 
 macro_rules! unwrap_ast {
@@ -57,6 +58,7 @@ macro_rules! consume {
     };
 }
 
+#[derive(Clone)]
 pub struct CopperParser {
     pub current_token: Option<Token>,
     pub previous_token: Option<Token>,
@@ -572,6 +574,13 @@ impl CopperParser {
         return Some(AstStmt::Expr(expr));
     }
 
+    fn import_stmt(&mut self) -> Option<AstStmt> {
+        let expr = unwrap_ast!(self.expression());
+        consume!(self, Token::Semicolon, "Expected ';' after expression");
+
+        return Some(AstStmt::Import(expr));
+    }
+
     fn stmt(&mut self) -> Option<AstStmt> {
         if self.match_tokens(&[Token::Func]) {
             return self.function_stmt("function");
@@ -591,6 +600,10 @@ impl CopperParser {
 
         if self.match_tokens(&[Token::Return]) {
             return self.return_stmt();
+        }
+
+        if self.match_tokens(&[Token::Import]) {
+            return self.import_stmt();
         }
 
         return self.expr_stmt();
@@ -713,6 +726,8 @@ impl fmt::Display for AstStmt {
             } else {
                 write!(f, "return {}\n", value.unwrap())
             },
+
+            AstStmt::Import(expr) => write!(f, "import {}\n", expr),
         }
     }
 }

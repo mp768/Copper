@@ -56,6 +56,8 @@ fn copper_inputln(values: Vec<Value>) -> Value {
         Err(err) => panic!("{}", err),
     }
 
+    input = input.trim().to_string();
+
     return Value::Str(input);
 }
 
@@ -66,8 +68,9 @@ fn main() {
     if cmd_args.len() == 0 {
         //println!("copper [file names...]");
         //return;
-        cmd_args.push(String::from("text_adventure_game.txt"));
-        cmd_args.push(String::from("text_adventure_lib.txt"));
+        cmd_args.push(String::from("test.txt"));
+        //cmd_args.push(String::from("text_adventure_game.txt"));
+        //cmd_args.push(String::from("text_adventure_lib.txt"));
     }
 
 

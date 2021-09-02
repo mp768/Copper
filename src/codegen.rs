@@ -10,6 +10,7 @@ pub struct CopperGen {
     pub current_line: usize,
     pub chunk: Chunk,
     block_increment: usize,
+    files: Vec<String>,
 }
 
 impl CopperGen {
@@ -199,6 +200,22 @@ impl CopperGen {
 
     fn generate_stmt(&mut self, stmt: AstStmt) {
         match stmt {
+            AstStmt::Import(expr) => {
+                if let AstExpr::Literal(x) = &expr {
+                    let val = x.string_s();
+
+                    if !self.files.iter().any(|x| *x == val) {
+                        self.files.push(val.clone());
+                        let current_parser = self.parser.clone();
+                        self.parser = CopperParser::new(std::fs::read_to_string(val).unwrap());
+                        self.generate_loop();
+                        self.parser = current_parser;
+                    }
+                } else {
+                    println!("Expected a literal expression for import stmt");
+                    return;
+                }
+            }
             AstStmt::Expr(expr) => self.blacklist_expr(expr),
             AstStmt::Declaration(name, ctype, expr) => {
                 if let AstExpr::Block(_) = expr {
@@ -282,14 +299,17 @@ impl CopperGen {
 
     pub fn generate_chunk(&mut self, files: Vec<String>) -> Chunk {
         for i in files {
-            let source = std::fs::read_to_string(i).expect("Couldn't read the file");
-
-            self.parser = CopperParser::new(source);
-            self.generate_loop();
+            if !self.files.iter().any(|x| *x == i) {
+                let source = std::fs::read_to_string(i.clone()).expect("Couldn't read the file");
+                
+                self.parser = CopperParser::new(source);
+                self.files.push(i.clone());
+                self.generate_loop();
+            }
         }
-
+        
         self.chunk.write(OpCode::EndScript, self.current_line);
-
+        
         let final_chunk = self.chunk.clone();
 
         self.chunk.erase();
@@ -303,6 +323,7 @@ impl CopperGen {
             current_line: 0,
             chunk: Chunk::new(),
             block_increment: 0,
+            files: Vec::new(),
         }
     }
 }
