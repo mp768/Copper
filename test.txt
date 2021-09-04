@@ -1,7 +1,7 @@
 // This is a comment, wow!
 
 import "text_adventure_lib.txt";
-import "text_adventure_game.txt";
+//import "text_adventure_game.txt";
 
 // these are the basic types:
 // any - can accept "any" value
@@ -16,6 +16,7 @@ func fib(n: int): int {
     if n <= 1 {
         return n;
     } else {
+        // you can use functions at any time.
         return add(fib(n-1), fib(n-2));
     }
 }
@@ -25,7 +26,7 @@ func add(a: any, b: any): int {
     return a + b;
 }
 
-println(add(5, 6.7));
+println(add(5, "6"));
 
 // the higher the number, the slower this function will take.
 println(fib(8));
@@ -45,6 +46,15 @@ y = {
 };
 
 println("Y: " + y);
+
+var uvar: uint = int_abs(-4.67489);
+println({
+    if uvar == 5 {
+        quit;
+    } else {
+        return "UVAR ISN'T 5";
+    }
+});
 
 //for i; i <= 10002003040; i *= 5 {
 //    i += 1;

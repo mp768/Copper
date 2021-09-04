@@ -61,6 +61,34 @@ fn copper_inputln(values: Vec<Value>) -> Value {
     return Value::Str(input);
 }
 
+fn copper_int_abs(values: Vec<Value>) -> Value {
+    let val = values[0].clone();
+    let mut val = val.int_s();
+
+    if val < 0 {
+        val = -val;
+    }
+
+    return Value::Int(val);
+}
+
+fn copper_decimal_abs(values: Vec<Value>) -> Value {
+    let val = values[0].clone();
+    let mut val = val.decimal_s();
+
+    if val < 0.0 {
+        val = -val;
+    }
+
+    return Value::Decimal(val);
+}
+
+struct RealNumber {
+    negative: bool,
+    number: u64,
+    increment: u64,
+}
+
 fn main() {
     let mut cmd_args: Vec<String> = std::env::args().collect();
     cmd_args.remove(0);
@@ -82,6 +110,8 @@ fn main() {
     new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
     new_chunk.bind_native_function("input".to_string(), 1, &copper_input);
     new_chunk.bind_native_function("inputln".to_string(), 1, &copper_inputln);
+    new_chunk.bind_native_function("int_abs".to_string(), 1, &copper_int_abs);
+    new_chunk.bind_native_function("decimal_abs".to_string(), 1, &copper_decimal_abs);
 
     //new_chunk.disassemble();
 

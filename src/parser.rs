@@ -29,6 +29,7 @@ pub enum AstStmt {
     While(AstExpr, AstExpr),
     Function(String, ClassType, Vec<String>, Vec<ClassType>, AstExpr),
     Return(Option<AstExpr>),
+    Quit,
     Import(AstExpr),
 }
 
@@ -606,6 +607,11 @@ impl CopperParser {
             return self.import_stmt();
         }
 
+        if self.match_tokens(&[Token::Quit]) {
+            consume!(self, Token::Semicolon, "Expected ';' after quit stmt");
+            return Some(AstStmt::Quit);
+        }
+
         return self.expr_stmt();
     }
 
@@ -699,6 +705,7 @@ impl fmt::Display for AstExpr {
 impl fmt::Display for AstStmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
+            AstStmt::Quit => write!(f, "quit\n"),
             AstStmt::Expr(expr) => write!(f, "{}\n", expr),
             AstStmt::Declaration(name, ctype, value) => write!(f, "var {}: {:?} = {}\n", name, ctype, value),
             AstStmt::InferDeclaration(name, value) => write!(f, "var {} = {}\n", name, value),

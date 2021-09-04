@@ -200,6 +200,9 @@ impl CopperGen {
 
     fn generate_stmt(&mut self, stmt: AstStmt) {
         match stmt {
+            AstStmt::Quit => {
+                self.chunk.write(OpCode::EndScript, self.current_line);
+            }
             AstStmt::Import(expr) => {
                 if let AstExpr::Literal(x) = &expr {
                     let val = x.string_s();

@@ -39,6 +39,7 @@ pub enum Token {
 
     Func,
     While,
+    Quit,
 
     Colon,
     ColonEqual,
@@ -176,6 +177,7 @@ impl Lexer {
             "any" => return Some(Token::TypeAny),
             "bool" => return Some(Token::TypeBool),
             "import" => return Some(Token::Import),
+            "quit" => return Some(Token::Quit),
             _ => return Some(Token::Identifer(identifer.to_string())),
         }
     }
@@ -377,6 +379,7 @@ impl fmt::Display for Token {
             Token::Comment => todo!(),
             Token::ERROR => todo!(),
             Token::Import => todo!(),
+            Token::Quit => todo!(),
         }
     }
 }
