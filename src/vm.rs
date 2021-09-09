@@ -1,4 +1,4 @@
-use crate::environment::{Environment, EnvEntry};
+use crate::environment::{EnvEntry, Environment};
 use crate::value::{ClassType, Value};
 use crate::chunk::{Chunk, OpCode};
 
@@ -29,6 +29,7 @@ macro_rules! binary_compare {
             Value::Decimal(_) => $self.stack.push(Value::Bool(a.decimal_s() $op b.decimal_s())),
             Value::Str(_) => $string_block,
             Value::Bool(_) => $bool_block,
+            Value::Struct(_) => panic!("Cannot compare for '{}' with structures.", $type),
             Value::None => panic!("Cannot compare for '{}' with 'none' type.", $type),
         }
     };
@@ -46,6 +47,7 @@ macro_rules! binary_compare {
             Value::Bool(_) => {
                 $self.stack.push(Value::Bool(a.bool_s() $op b.bool_s()));
             },
+            Value::Struct(_) => panic!("Cannot compare for '{}' with structures.", $type),
             Value::None => panic!("Cannot compare for '{}' with 'none' type.", $type),
         }
     };
@@ -161,11 +163,66 @@ impl VM {
                                 let value = self.stack_pop();
                                 self.stack.push(Value::Bool(value.bool_s()));
                             },
+                            ClassType::Struct(x) => {
+                                let value = self.stack_pop();
+                                self.stack.push(Value::Struct(value.struct_s(x)));
+                            }
                         }
                     } else {
                         panic!("Cannot return out of the script, only in function.");
                     }
                 },
+                OpCode::StructSet(name, sets) => {
+                    let mut variable = self.environment.get_variable(name.clone());
+                    let mut value = self.stack_pop();
+                    
+                    if let EnvEntry::Variable(_, val, _, _) = &mut variable {
+                        if let Value::Struct(cs) = val {
+                            cs.set(sets, value);
+                            value = Value::Struct(cs.clone());
+                        } else {
+                            panic!("Expected to set a struct");
+                        }
+                    }
+
+                    self.environment.assign_variable(name, value);
+                }
+                OpCode::StructSetByIndex(index) => {
+                    let structure = self.stack_pop();
+                    let value = self.stack_pop();
+
+                    let structure = match structure {
+                        Value::Struct(cs) => {
+                            let mut cs = cs;
+                            if !(cs.field_values.len() <= index) {
+                                cs.field_values[index] = value;
+                            } else {
+                                self.stack.pop();
+                            }
+
+                            cs
+                        }
+                        _ => panic!("Cannot assign by index as not a struct"),
+                    };
+
+                    self.stack.push(Value::Struct(structure));
+                }
+                OpCode::StructGet(name) => {
+                    let value = self.stack_pop();
+                    //println!("name: {}, val: {:?}", name.clone(), value.clone());
+                    match value {
+                        Value::Struct(cs) => {
+                            //println!("Struct: "); cs.get(name.clone()).println();
+                            self.stack.push(cs.get(name));
+                        }
+                        _ => panic!("Expected a struct!"),
+                    }
+                }
+                OpCode::NewStruct(name) => {
+                    self.stack.push(Value::Struct(unsafe { 
+                        (*self.chunk).functions.get_struct(name) 
+                    }));
+                }
                 OpCode::TransformToType(ctype) => {
                     let val = self.stack_pop();
                     match ctype {
@@ -175,6 +232,7 @@ impl VM {
                         ClassType::Decimal => self.stack.push(Value::Decimal(val.decimal_s())),
                         ClassType::Str => self.stack.push(Value::Str(val.string_s())),
                         ClassType::Bool => self.stack.push(Value::Bool(val.bool_s())),
+                        ClassType::Struct(x) => self.stack.push(Value::Struct(val.struct_s(x))),
                     }
                 }
                 OpCode::EndScript => {
@@ -281,6 +339,7 @@ impl VM {
                         Value::Decimal(x) => self.stack.push(Value::Decimal(-x)),
                         Value::Str(_) => panic!("Cannot negate a value under the type 'string'."),
                         Value::Bool(_) => panic!("Cannot negate a value under the type 'bool'."),
+                        Value::Struct(x) => panic!("Cannot negate a value under the type 'struct {}'.", x.name),
                         Value::None => panic!("Cannot negate a value under the type 'none'."),
                     }
                 },
@@ -293,6 +352,7 @@ impl VM {
                         Value::Int(_) => self.stack.push(Value::Bool(!val.bool_s())),
                         Value::Decimal(_) => self.stack.push(Value::Bool(!val.bool_s())),
                         Value::Bool(_) => self.stack.push(Value::Bool(!val.bool_s())),
+                        Value::Struct(x) => panic!("Cannot 'not' a value under the type 'struct {}'.", x.name),
                         Value::Str(_) => panic!("Cannot 'not' a value under the type 'string'."),
                     }
                 }

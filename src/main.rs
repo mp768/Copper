@@ -61,32 +61,32 @@ fn copper_inputln(values: Vec<Value>) -> Value {
     return Value::Str(input);
 }
 
-fn copper_int_abs(values: Vec<Value>) -> Value {
+fn copper_abs(values: Vec<Value>) -> Value {
     let val = values[0].clone();
-    let mut val = val.int_s();
 
-    if val < 0 {
-        val = -val;
+    match val {
+        Value::None => return Value::Int(0),
+        Value::Uint(x) => return Value::Uint(x),
+        Value::Int(x) => return Value::Int(if x < 0 {
+            -x
+        } else {
+            x
+        }),
+        Value::Decimal(x) => return Value::Decimal(if x < 0.0 {
+            -x
+        } else {
+            x
+        }),
+        Value::Str(x) => return Value::Str(x),
+        Value::Bool(_) => return Value::Bool(true),
+        Value::Struct(_) => return Value::None,
     }
-
-    return Value::Int(val);
 }
 
-fn copper_decimal_abs(values: Vec<Value>) -> Value {
+pub fn copper_type_to_string(values: Vec<Value>) -> Value {
     let val = values[0].clone();
-    let mut val = val.decimal_s();
 
-    if val < 0.0 {
-        val = -val;
-    }
-
-    return Value::Decimal(val);
-}
-
-struct RealNumber {
-    negative: bool,
-    number: u64,
-    increment: u64,
+    return Value::Str(val.type_to_string());
 }
 
 fn main() {
@@ -110,10 +110,10 @@ fn main() {
     new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
     new_chunk.bind_native_function("input".to_string(), 1, &copper_input);
     new_chunk.bind_native_function("inputln".to_string(), 1, &copper_inputln);
-    new_chunk.bind_native_function("int_abs".to_string(), 1, &copper_int_abs);
-    new_chunk.bind_native_function("decimal_abs".to_string(), 1, &copper_decimal_abs);
+    new_chunk.bind_native_function("abs".to_string(), 1, &copper_abs);
+    new_chunk.bind_native_function("type_str".to_string(), 1, &copper_type_to_string);
 
-    //new_chunk.disassemble();
+    new_chunk.disassemble();
 
     let mut vm = VM::new(&new_chunk);
 
@@ -124,12 +124,4 @@ fn main() {
     //}
 
     vm.interpret();
-
-    //let mut c = scanner.next();
-    //while c != None {
-    //    print!("{:?}: ", c.unwrap());
-    //    println!("{}", scanner.slice());
-//
-    //    c = scanner.next();
-    //}
 }

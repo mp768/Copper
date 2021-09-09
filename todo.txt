@@ -1,0 +1,3 @@
+add macros of some sort. []
+add arrays (doesn't matter how) []
+start using the language in a test engine []

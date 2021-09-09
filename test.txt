@@ -11,6 +11,68 @@ import "text_adventure_lib.txt";
 // string - can accept "messages like this"
 // bool - has only two values, true or false 
 
+struct Vec2 {
+    x, y
+}
+
+struct Vec3 {
+    x, y, z
+}
+
+struct Vec4 {
+    x, y, z, q
+}
+
+struct Window {
+    name,
+    width,
+    height,
+    border
+}
+
+func create_Window(window: any) {
+    if type_str(window) != "Window" {
+        println("WINDOWWWWWWWWWWWWW");
+        return;
+    }
+
+    if type_str(window.name) != "string" {
+        println("WHYYYYYYYYYYYYY");
+        return;
+    }
+
+    if type_str(window.width) != "int" {
+        println("WIDTHHHHHHHHHH");
+        return;
+    }
+
+    if type_str(window.height) != "int" {
+        println("HEIGHTTTTTTTTTTTTTTTT");
+        return;
+    }
+
+    if type_str(window.border) != "bool" {
+        println("BORDERRRRRRRR");
+        return;
+    }
+
+    // Of course a create window function would be in rust and not in copper, but it's just to showcase new type check.
+    println("SUCCESS");
+}
+
+var vec2 = new Vec3(5, 6, 9);
+vec2.x = new Vec2(5, 9);
+vec2.y = new Vec3(9, new Vec3(6, 7, 8), new Vec4(0, 1, 2, 3));
+vec2.z = new Window("hello", 720, 480, true);
+
+// Empty
+var vec4 = new Vec4;
+println(vec4);
+
+println(vec2);
+create_Window(vec2.z);
+
+
 // This is an example of a looping function.
 func fib(n: int): int {
     if n <= 1 {
@@ -34,7 +96,7 @@ println(fib(8));
 var o = 7 > 8 ? 4 > 5 ? 15 : 6 : 5;
 println("O: " + o);
 
-two_choice_options("H", "Y", "HELLO", "YELL");
+//two_choice_options("H", "Y", "HELLO", "YELL");
 
 var y = {
     var y = add(5, 6);
@@ -47,7 +109,12 @@ y = {
 
 println("Y: " + y);
 
-var uvar: uint = int_abs(-4.67489);
+struct hello {
+    t, 
+    o
+}
+
+var uvar: uint = abs(-5);
 println({
     if uvar == 5 {
         quit;

@@ -1,4 +1,4 @@
-use std::{num::ParseIntError, string::ParseError};
+use crate::environment::CopperStruct;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
@@ -8,9 +8,10 @@ pub enum Value {
     Decimal(f64),
     Str(String),
     Bool(bool),
+    Struct(CopperStruct),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ClassType {
     Any,
     Uint,
@@ -18,6 +19,7 @@ pub enum ClassType {
     Decimal,
     Str,
     Bool,
+    Struct(String),
 }
 
 macro_rules! binary_op_with_value {
@@ -38,6 +40,7 @@ macro_rules! binary_op_with_value {
             Value::Decimal(_) => return Value::Decimal($this.decimal_s() $op $other.decimal_s()),
             Value::Bool(_) => $to_do_bool,
             Value::Str(_) => $what_to_do_with_string,
+            Value::Struct(_) => panic!("Cannot add value to a struct."),
             Value::None => panic!("Cannot add a value of 'none'"),
             //_ => panic!("Cannot add these values.")
         }
@@ -45,6 +48,36 @@ macro_rules! binary_op_with_value {
 }
 
 impl Value {
+    fn print_struct(&self, increment: u32) {
+        match self {
+            Self::Struct(x) => {
+                println!("Struct '{}'", x.name);
+                for i in 0..x.field_names.len() {
+                    for _ in 0..increment {
+                        print!(" ");
+                    }
+
+                    print!("'{}': ", x.field_names[i]);
+                    x.field_values[i].print_struct(increment+4);
+                    println!();
+                }
+            }
+            _ => self.print(),
+        }
+    }
+
+    pub fn type_to_string(&self) -> String {
+        match self {
+            Self::Int(_) => "int",
+            Self::Uint(_) => "uint",
+            Self::Decimal(_) => "decimal",
+            Self::Bool(_) => "bool",
+            Self::Struct(cs) => cs.name.as_str(),
+            Self::Str(_) => "string",
+            Self::None => "none",
+        }.to_string()
+    }
+
     pub fn print(&self) {
         match self {
             Self::Int(x) => print!("{}", x),
@@ -52,6 +85,7 @@ impl Value {
             Self::Decimal(x) => print!("{}", x),
             Self::Bool(x) => print!("{}", x),
             Self::Str(x) => print!("{}", x),
+            Self::Struct(_) => self.print_struct(4),
             Self::None => print!("NONE"),
             //_ => print!("No Value.")
         }
@@ -64,6 +98,7 @@ impl Value {
             Self::Decimal(_) => print!("decimal"),
             Self::Bool(_) => print!("bool"),
             Self::Str(_) => print!("string"),
+            Self::Struct(x) => print!("Struct('{}')", x.name),
             Self::None => print!("none"),
             //_ => print!("unknown value")
         }
@@ -79,6 +114,19 @@ impl Value {
         println!("{:?}", self);
     }
 
+    pub fn struct_s(&self, name: String) -> CopperStruct {
+        match self {
+            Value::Int(_) => panic!("Cannot convert a value of 'int' to 'struct {}'.", name),
+            Value::Uint(_) => panic!("Cannot convert a value of 'uint' to 'struct {}'.", name),
+            Value::Decimal(_) => panic!("Cannot convert a value of 'decimal' to 'struct {}'.", name),
+            Value::Bool(_) => panic!("Cannot convert a value of 'bool' to 'struct {}'.", name),
+            Value::Str(_) => panic!("Cannot convert a value of 'string' to 'struct {}'.", name),
+            Value::Struct(x) => return x.clone(),
+            Value::None => panic!("Cannot convert a value of 'none' to 'struct {}'.", name),
+            //_ => panic!("Unknown value used to convert to 'int'."),
+        }
+    }
+
     pub fn int_s(&self) -> i64 {
         match self {
             Value::Int(x) => return *x,
@@ -86,6 +134,7 @@ impl Value {
             Value::Decimal(x) => return *x as i64,
             Value::Bool(_) => panic!("Cannot convert a value of 'bool' to 'int'."),
             Value::Str(x) => return x.trim().parse().unwrap(),
+            Value::Struct(_) => panic!("Cannot convert a struct to any value."),
             Value::None => 0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -98,6 +147,7 @@ impl Value {
             Self::Decimal(x) => return *x as u64,
             Self::Bool(_) => panic!("Cannot convert a value of 'bool' to 'uint'."),
             Self::Str(x) => return x.trim().parse().unwrap(),
+            Value::Struct(_) => panic!("Cannot convert a struct to any value."),
             Self::None => 0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -110,6 +160,7 @@ impl Value {
             Self::Decimal(x) => return *x,
             Self::Bool(_) => panic!("Cannot convert a value of 'bool' to 'decimal'."),
             Self::Str(x) => return x.trim().parse().unwrap(),
+            Value::Struct(_) => panic!("Cannot convert a struct to any value."),
             Self::None => 0.0,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -122,6 +173,21 @@ impl Value {
             Self::Decimal(x) => return x.to_string(),
             Self::Bool(x) => return x.to_string(),
             Self::Str(x) => return x.clone(),
+            Value::Struct(cs) => {
+                let mut string = String::new();
+                string.push_str(format!("struct '{}': ", cs.name).as_str());
+                
+                for i in 0..cs.field_names.len() {
+                    string.push_str(format!("'{}': ", cs.field_names[i]).as_str());
+                    string.push_str(cs.field_values[i].string_s().as_str());
+
+                    if i != cs.field_names.len()-1 {
+                        string.push_str(", ");
+                    }
+                }
+
+                return string;
+            },
             Self::None => String::from(""),
             //_ => panic!("Unknown value used to convert to 'int'."),
         }
@@ -134,6 +200,7 @@ impl Value {
             Self::Decimal(_) => panic!("Cannot convert a value of 'decimal' to 'bool'."),
             Self::Bool(x) => return *x,
             Self::Str(x) => return x.trim().parse().unwrap(),
+            Value::Struct(_) => panic!("Cannot convert a struct to any value."),
             Self::None => false,
             //_ => panic!("Unknown value used to convert to 'int'."),
         }

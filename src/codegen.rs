@@ -1,5 +1,4 @@
-use std::ops::Deref;
-
+use crate::environment::CopperStruct;
 use crate::parser::{AstStmt, AstExpr};
 use crate::tokens::Token;
 use crate::value::{ClassType, Value};
@@ -14,9 +13,72 @@ pub struct CopperGen {
 }
 
 impl CopperGen {
+    fn recursive_get_names(&self, left: Box<AstExpr>, right: Box<AstExpr>) -> Vec<String> {
+        let mut stack = Vec::new();
+
+        for i in self.recursive_get_name(left) {
+            stack.push(i);
+        }
+
+        for i in self.recursive_get_name(right) {
+            stack.push(i);
+        }
+
+        return stack;
+    }
+
+    fn recursive_get_name(&self, left: Box<AstExpr>) -> Vec<String> {
+        match *left {
+            AstExpr::Variable(name) => {
+                return vec![name];
+            }
+            AstExpr::StructCall(left, right) => {
+                let mut stack = Vec::new();
+                for i in self.recursive_get_name(left) {
+                    stack.push(i);
+                }
+
+                for i in self.recursive_get_name(right) {
+                    stack.push(i);
+                }
+
+                return stack;
+            }
+            _ => {},
+        }
+
+        return Vec::new();
+    }
+
     fn generate_expr(&mut self, expr: AstExpr) {
         match expr {
             AstExpr::Nothing => {},
+            AstExpr::NewCall(name, arguments) => {
+                for i in arguments.clone() {
+                    self.generate_expr(i);
+                }
+
+                self.chunk.write(OpCode::NewStruct(name), self.current_line);
+
+                for i in 0..arguments.len() {
+                    let i = arguments.len()-i-1;
+                    self.chunk.write(OpCode::StructSetByIndex(i), self.current_line);
+                }
+            }
+            AstExpr::StructCall(left, right) => {
+                self.generate_expr(*left);
+
+                let value = if let AstExpr::Variable(x) = *right {
+                    x
+                } else {
+                    panic!("Expected a variable expr");
+                };
+
+                self.chunk.write(OpCode::StructGet(value), self.current_line);
+            }
+            AstExpr::New(name) => {
+                self.chunk.write(OpCode::NewStruct(name), self.current_line);
+            }
             AstExpr::TypeCall(ctype, expr) => {
                 self.generate_expr(*expr);
 
@@ -69,7 +131,14 @@ impl CopperGen {
                 } else {
                     self.generate_expr(*expr);
                 }
-                self.chunk.write(OpCode::Assign(name), self.current_line);
+
+                if let AstExpr::Variable(name) = *name {
+                    self.chunk.write(OpCode::Assign(name), self.current_line);
+                } else if let AstExpr::StructCall(left, right) = *name {
+                    let mut stack = self.recursive_get_names(left, right);
+                    let name = stack.remove(0);
+                    self.chunk.write(OpCode::StructSet(name, stack), self.current_line);
+                }
             },
             AstExpr::AssignByOp(name, op, expr) => {
                 self.chunk.write_load(name.clone(), self.current_line);
@@ -157,6 +226,7 @@ impl CopperGen {
         match expr {
             AstExpr::Unary(_, _) => {},
             AstExpr::Literal(_) => {},
+            AstExpr::StructCall(_, _) => {},
             AstExpr::Binary(a, _, b) => {
                 self.blacklist_expr(*a);
                 self.blacklist_expr(*b);
@@ -181,6 +251,7 @@ impl CopperGen {
 
                 self.patch_jmp(self.chunk.code.len(), jmp_over_false);
             }
+            AstExpr::New(_) => {},
             _ => self.generate_expr(expr),
         }
     }
@@ -200,6 +271,15 @@ impl CopperGen {
 
     fn generate_stmt(&mut self, stmt: AstStmt) {
         match stmt {
+            AstStmt::Struct(name, fields) => {
+                let mut structure = CopperStruct::new(name);
+
+                for s in fields {
+                    structure.insert(s, Value::None);
+                }
+
+                self.chunk.functions.add_struct(structure);
+            }
             AstStmt::Quit => {
                 self.chunk.write(OpCode::EndScript, self.current_line);
             }
@@ -267,7 +347,7 @@ impl CopperGen {
                 self.chunk.write(OpCode::StartScope, self.current_line);
 
                 for i in 0..arg_names.len() {
-                    self.chunk.write_argument_store(arg_names[i].clone(), arg_types[i], self.current_line);
+                    self.chunk.write_argument_store(arg_names[i].clone(), arg_types[i].clone(), self.current_line);
                 }
 
                 self.generate_expr(body);

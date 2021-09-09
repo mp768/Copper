@@ -38,6 +38,8 @@ pub enum Token {
     Semicolon,
 
     Func,
+    Struct,
+    New,
     While,
     Quit,
 
@@ -178,6 +180,8 @@ impl Lexer {
             "bool" => return Some(Token::TypeBool),
             "import" => return Some(Token::Import),
             "quit" => return Some(Token::Quit),
+            "struct" => return Some(Token::Struct),
+            "new" => return Some(Token::New),
             _ => return Some(Token::Identifer(identifer.to_string())),
         }
     }
@@ -380,6 +384,7 @@ impl fmt::Display for Token {
             Token::ERROR => todo!(),
             Token::Import => todo!(),
             Token::Quit => todo!(),
+            _ => todo!(),
         }
     }
 }

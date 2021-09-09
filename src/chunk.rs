@@ -36,6 +36,10 @@ pub enum OpCode {
     InferStore(String),
     Load(String),
     Assign(String),
+    NewStruct(String),
+    StructGet(String),
+    StructSet(String, Vec<String>),
+    StructSetByIndex(usize),
 
     PopToCall,
 
@@ -151,7 +155,11 @@ impl Chunk {
             OpCode::Not => print!("not"),
             OpCode::EndScope => print!("end scope"),
             OpCode::TransformToType(c) => print!("transform to {:?}", c),
-            _ => println!("[Unknown opcode]"),
+            OpCode::StructGet(name) => print!("struct get {}", name),
+            OpCode::StructSet(name, sets) => print!("struct set {}, {:?}", name, sets),
+            OpCode::StructSetByIndex(index) => print!("set {} index of struct", index),
+            OpCode::NewStruct(name) => print!("new set of structure {}", name),
+            // _ => println!("[Unknown opcode]"),
         }
     }
 

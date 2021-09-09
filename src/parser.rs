@@ -9,15 +9,18 @@ pub enum AstExpr {
     Binary(Box<AstExpr>, Token, Box<AstExpr>),
     Ternary(Box<AstExpr>, Box<AstExpr>, Box<AstExpr>),
     Group(Box<AstExpr>),
+    StructCall(Box<AstExpr>, Box<AstExpr>),
 
     Literal(Value),
     Unary(Token, Box<AstExpr>),
     Variable(String),
-    Assign(String, Box<AstExpr>),
+    Assign(Box<AstExpr>, Box<AstExpr>),
     AssignByOp(String, Token, Box<AstExpr>),
     Call(String, Vec<AstExpr>),
     TypeCall(Token, Box<AstExpr>),
     Block(Vec<AstStmt>),
+    New(String),
+    NewCall(String, Vec<AstExpr>),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -31,6 +34,7 @@ pub enum AstStmt {
     Return(Option<AstExpr>),
     Quit,
     Import(AstExpr),
+    Struct(String, Vec<String>),
 }
 
 macro_rules! unwrap_ast {
@@ -185,7 +189,7 @@ impl CopperParser {
 
         let mut arguments: Vec<AstExpr> = Vec::new();
 
-        if !self.match_tokens(&[Token::RightParen]) {
+        if !self.check(Token::RightParen) {
             do_while!(self.match_tokens(&[Token::Comma]) => {
                 if arguments.len() > 255 {
                     self.report_error("Can't have more than 255 arguments in a call");
@@ -215,6 +219,25 @@ impl CopperParser {
         return Some(expr);
     }
 
+    fn new_call_expr(&mut self) -> Option<AstExpr> {
+        if self.match_tokens(&[Token::New]) {
+            let identifer = self.current_lexeme.clone();
+            consume!(self, Token::Identifer(self.current_lexeme.clone()), "Expected an identifer after 'new'");
+
+            if self.match_tokens(&[Token::LeftParen]) {
+                let call = unwrap_ast!(self.finish_call_expr(AstExpr::Variable(identifer.clone())));
+
+                if let AstExpr::Call(_, arguments) = call {
+                    return Some(AstExpr::NewCall(identifer, arguments));
+                }
+            }
+
+            return Some(AstExpr::New(identifer));
+        }
+
+        return self.call_expr();
+    }
+
     fn type_call_expr(&mut self) -> Option<AstExpr> {
         if self.match_tokens(&[Token::TypeAny, Token::TypeInt, Token::TypeUint, Token::TypeDecimal, Token::TypeString, Token::TypeBool]) {
             let ctype = unwrap_ast!(self.peek_previous());
@@ -224,7 +247,7 @@ impl CopperParser {
             return Some(AstExpr::TypeCall(ctype, Box::new(expr)));
         }
 
-        return self.call_expr();
+        return self.new_call_expr();
     }
 
     fn unary_expr(&mut self) -> Option<AstExpr> {
@@ -238,8 +261,36 @@ impl CopperParser {
         return self.type_call_expr();
     }
 
-    fn factor_expr(&mut self) -> Option<AstExpr> {
+    fn struct_call_expr(&mut self) -> Option<AstExpr> {
         let mut expr = unwrap_ast!(self.unary_expr());
+
+        while self.match_tokens(&[Token::Dot]) {
+            match expr {
+                AstExpr::Variable(_) => {
+                    let right = unwrap_ast!(self.unary_expr());
+                    if let AstExpr::Variable(_) = right {
+                        expr = AstExpr::StructCall(Box::new(expr), Box::new(right));
+                    } else {
+                        panic!("Invalid concentration");
+                    }
+                }
+                AstExpr::StructCall(_, _) => {
+                    let right = unwrap_ast!(self.unary_expr());
+                    if let AstExpr::Variable(_) = right {
+                        expr = AstExpr::StructCall(Box::new(expr), Box::new(right));
+                    } else {
+                        panic!("Invalid concentration");
+                    }
+                }
+                _ => panic!("Invalid concentration")
+            }
+        }
+
+        return Some(expr);
+    }
+
+    fn factor_expr(&mut self) -> Option<AstExpr> {
+        let mut expr = unwrap_ast!(self.struct_call_expr());
 
         while self.match_tokens(&[Token::Star, Token::Slash]) {
             let op = unwrap_ast!(self.peek_previous());
@@ -351,8 +402,10 @@ impl CopperParser {
         if self.match_tokens(&[Token::Equal]) {
             let value = unwrap_ast!(self.assignment_expr());
 
-            if let AstExpr::Variable(name) = expr {
-                return Some(AstExpr::Assign(name, Box::new(value)));
+            if let AstExpr::Variable(_) = expr {
+                return Some(AstExpr::Assign(Box::new(expr), Box::new(value)));
+            } else if let AstExpr::StructCall(_, _) = expr {
+                return Some(AstExpr::Assign(Box::new(expr), Box::new(value)));
             }
 
             self.report_error("Invalid assignment");
@@ -449,6 +502,7 @@ impl CopperParser {
                     Token::TypeUint => ClassType::Uint,
                     Token::TypeInt => ClassType::Int,
                     Token::TypeString => ClassType::Str,
+                    Token::Identifer(x) => ClassType::Struct(x),
                     _ => {
                         self.report_error("Expected a type identifer");
                         return None;
@@ -471,6 +525,7 @@ impl CopperParser {
                 Token::TypeUint => ClassType::Uint,
                 Token::TypeInt => ClassType::Int,
                 Token::TypeString => ClassType::Str,
+                Token::Identifer(x) => ClassType::Struct(x),
                 _ => {
                     self.report_error("Expected a type identifer");
                     return None;
@@ -582,6 +637,29 @@ impl CopperParser {
         return Some(AstStmt::Import(expr));
     }
 
+    fn struct_stmt(&mut self) -> Option<AstStmt> {
+        let identifer = self.current_lexeme.clone();
+        consume!(self, Token::Identifer(identifer.clone()), "Expected an identifer after 'struct'");
+        consume!(self, Token::LeftBrace, "Expected '{' before struct declaration");
+
+        let mut fields: Vec<String> = Vec::new();
+
+        if !self.check(Token::RightBrace) {
+            do_while!(self.match_tokens(&[Token::Comma]) => {
+                if fields.len() > 255 {
+                    panic!("Cannot have more than 255 fields");
+                }
+
+                fields.push(self.current_lexeme.clone());
+                consume!(self, Token::Identifer(self.current_lexeme.clone()), "Expected an identifer for struct field");
+            });
+        }
+
+        consume!(self, Token::RightBrace, "Expected '}' after struct declaration");
+
+        return Some(AstStmt::Struct(identifer, fields));
+    }
+
     fn stmt(&mut self) -> Option<AstStmt> {
         if self.match_tokens(&[Token::Func]) {
             return self.function_stmt("function");
@@ -610,6 +688,10 @@ impl CopperParser {
         if self.match_tokens(&[Token::Quit]) {
             consume!(self, Token::Semicolon, "Expected ';' after quit stmt");
             return Some(AstStmt::Quit);
+        }
+
+        if self.match_tokens(&[Token::Struct]) {
+            return self.struct_stmt();
         }
 
         return self.expr_stmt();
@@ -664,6 +746,11 @@ impl CopperParser {
 impl fmt::Display for AstExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
+            AstExpr::NewCall(name, arguments) => write!(f, "new {}({:?})", name, arguments),
+            AstExpr::StructCall(left, right) => {
+                write!(f, "{}.{}", left, right)
+            }
+            AstExpr::New(name) => write!(f, "new {}", name),
             AstExpr::Nothing => write!(f, "nothing"),
             AstExpr::Binary(a, op, b) => write!(f, "{} {} {}", a, op, b),
             AstExpr::Group(group) => write!(f, "({})", group),
@@ -705,6 +792,13 @@ impl fmt::Display for AstExpr {
 impl fmt::Display for AstStmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.clone() {
+            AstStmt::Struct(name, fields) => {
+                write!(f, "Struct {} {{\n", name)?;
+                for s in fields {
+                    write!(f, "\t{},\n", s)?;
+                }
+                write!(f, "}}\n")
+            }
             AstStmt::Quit => write!(f, "quit\n"),
             AstStmt::Expr(expr) => write!(f, "{}\n", expr),
             AstStmt::Declaration(name, ctype, value) => write!(f, "var {}: {:?} = {}\n", name, ctype, value),
