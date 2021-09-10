@@ -141,7 +141,11 @@ impl CopperGen {
                 }
             },
             AstExpr::AssignByOp(name, op, expr) => {
-                self.chunk.write_load(name.clone(), self.current_line);
+                if let AstExpr::Variable(name) = *name.clone() {
+                    self.chunk.write_load(name, self.current_line);
+                } else if let AstExpr::StructCall(_, _) = *name {
+                    self.generate_expr(*name.clone());
+                }
 
                 if let AstExpr::Block(_) = *expr {
                     self.generate_block_function(*expr);
@@ -156,7 +160,14 @@ impl CopperGen {
                     Token::SlashEqual => self.chunk.write(OpCode::Div, self.current_line), 
                     _ => panic!("Expected an operator for assigning"),
                 }
-                self.chunk.write(OpCode::Assign(name), self.current_line);
+                
+                if let AstExpr::Variable(name) = *name {
+                    self.chunk.write(OpCode::Assign(name), self.current_line);
+                } else if let AstExpr::StructCall(left, right) = *name {
+                    let mut stack = self.recursive_get_names(left, right);
+                    let name = stack.remove(0);
+                    self.chunk.write(OpCode::StructSet(name, stack), self.current_line);
+                }
             }
             AstExpr::Call(name, arguments) => self.generate_call_expr(name, arguments),
             AstExpr::Block(stmts) => {

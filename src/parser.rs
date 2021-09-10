@@ -15,7 +15,7 @@ pub enum AstExpr {
     Unary(Token, Box<AstExpr>),
     Variable(String),
     Assign(Box<AstExpr>, Box<AstExpr>),
-    AssignByOp(String, Token, Box<AstExpr>),
+    AssignByOp(Box<AstExpr>, Token, Box<AstExpr>),
     Call(String, Vec<AstExpr>),
     TypeCall(Token, Box<AstExpr>),
     Block(Vec<AstStmt>),
@@ -386,8 +386,10 @@ impl CopperParser {
             let op = unwrap_ast!(self.peek_previous());
             let value = unwrap_ast!(self.assignment_expr());
 
-            if let AstExpr::Variable(name) = expr {
-                return Some(AstExpr::AssignByOp(name, op, Box::new(value)));
+            if let AstExpr::Variable(_) = expr {
+                return Some(AstExpr::AssignByOp(Box::new(expr), op, Box::new(value)));
+            } else if let AstExpr::StructCall(_, _) = expr {
+                return Some(AstExpr::AssignByOp(Box::new(expr), op, Box::new(value)));
             }
 
             self.report_error("Invalid assignment");

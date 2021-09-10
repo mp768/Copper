@@ -1,3 +1,5 @@
 add macros of some sort. []
+* macros would require me to make a new "language" to do basic text replacement.
+* but it would allow me to do very cool things in the language, like a switch block.
 add arrays (doesn't matter how) []
 start using the language in a test engine []

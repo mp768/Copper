@@ -38,6 +38,7 @@ impl CopperStruct {
                     match value {
                         Value::Struct(cs) => {
                             structure = cs;
+                            break;
                         }
                         _ => panic!("Expected to find a structure"),
                     }

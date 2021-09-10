@@ -1,3 +1,4 @@
+pub mod mini_macros;
 pub mod tokens;
 pub mod value;
 pub mod chunk;
@@ -9,6 +10,7 @@ pub mod codegen;
 use std::io::{Write, stdin, stdout};
 
 use codegen::CopperGen;
+use mini_macros::tokenizer::MacroTokenizer;
 use parser::CopperParser;
 use value::{Value};
 use vm::VM;
@@ -89,6 +91,7 @@ pub fn copper_type_to_string(values: Vec<Value>) -> Value {
     return Value::Str(val.type_to_string());
 }
 
+
 fn main() {
     let mut cmd_args: Vec<String> = std::env::args().collect();
     cmd_args.remove(0);
@@ -113,7 +116,7 @@ fn main() {
     new_chunk.bind_native_function("abs".to_string(), 1, &copper_abs);
     new_chunk.bind_native_function("type_str".to_string(), 1, &copper_type_to_string);
 
-    new_chunk.disassemble();
+    //new_chunk.disassemble();
 
     let mut vm = VM::new(&new_chunk);
 
@@ -123,5 +126,11 @@ fn main() {
     //    println!("{:?}", x);
     //}
 
-    vm.interpret();
+    let mut tokenizer = MacroTokenizer::new("test.txt".to_string());
+
+    while let Some(x) = tokenizer.new_token() {
+        println!("{:?}", x);
+    }
+
+    //vm.interpret();
 }
