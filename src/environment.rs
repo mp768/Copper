@@ -106,6 +106,9 @@ impl Environment {
         for i in &self.entries {
             match i {
                 EnvEntry::Function(func_name, _, _, _) => if name == *func_name {
+                    for i in &self.entries {
+                        println!("ENTRY: {}", i);
+                    }
                     panic!("Cannot assign a function with name '{}' as one already exists.", name);
                 },
                 EnvEntry::NativeFunction(func_name, _, _) => if name == *func_name {

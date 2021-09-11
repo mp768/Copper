@@ -1,4 +1,5 @@
 use crate::environment::CopperStruct;
+use crate::mini_macros::tokenizer::MacroExpander;
 use crate::parser::{AstStmt, AstExpr};
 use crate::tokens::Token;
 use crate::value::{ClassType, Value};
@@ -10,6 +11,7 @@ pub struct CopperGen {
     pub chunk: Chunk,
     block_increment: usize,
     files: Vec<String>,
+    macro_expander: MacroExpander,
 }
 
 impl CopperGen {
@@ -301,7 +303,14 @@ impl CopperGen {
                     if !self.files.iter().any(|x| *x == val) {
                         self.files.push(val.clone());
                         let current_parser = self.parser.clone();
-                        self.parser = CopperParser::new(std::fs::read_to_string(val).unwrap());
+                        let current_macro_expander = self.macro_expander.clone();
+                        self.macro_expander = MacroExpander::new(vec![val.clone()]);
+
+                        let source = self.macro_expander.compile();
+
+                        //std::fs::write(format!("{}_file.txt", val), source.clone());
+                        self.parser = CopperParser::new(source);
+                        self.macro_expander = current_macro_expander;
                         self.generate_loop();
                         self.parser = current_parser;
                     }
@@ -392,15 +401,20 @@ impl CopperGen {
     }
 
     pub fn generate_chunk(&mut self, files: Vec<String>) -> Chunk {
+        self.macro_expander = MacroExpander::new(files.clone());
+
         for i in files {
-            if !self.files.iter().any(|x| *x == i) {
-                let source = std::fs::read_to_string(i.clone()).expect("Couldn't read the file");
-                
-                self.parser = CopperParser::new(source);
-                self.files.push(i.clone());
-                self.generate_loop();
-            }
+            self.files.push(i);
         }
+
+        let source = self.macro_expander.compile();
+
+        //std::fs::write("file.txt", source.clone());
+
+        let source = source;
+                
+        self.parser = CopperParser::new(source);
+        self.generate_loop();
         
         self.chunk.write(OpCode::EndScript, self.current_line);
         
@@ -418,6 +432,7 @@ impl CopperGen {
             chunk: Chunk::new(),
             block_increment: 0,
             files: Vec::new(),
+            macro_expander: MacroExpander::new(Vec::new()),
         }
     }
 }

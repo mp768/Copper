@@ -20,13 +20,13 @@ if s == 1 {
 
 var p = blank_options("You are a ", "!", "Doctor", "Computer Scientist", "God");
 
-if p == 1 {
-	println("Wow, A Doctor can heal their allies!");
-} else if p == 2 {
-	println("Wow, A Computer Scientist can make new automation!");
-} else {
-	println("Wow, A God can destroy the whole universe!");
-}
+//if p == 1 {
+//	println("Wow, A Doctor can heal their allies!");
+//} else if p == 2 {
+//	println("Wow, A Computer Scientist can make new automation!");
+//} else {
+//	println("Wow, A God can destroy the whole universe!");
+//}
 
 
 

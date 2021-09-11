@@ -25,21 +25,27 @@ func three_choice_options(option1: string, option2: string, option3: string, res
 	}
 }
 
-func blank_options(first_piece: string, second_piece: string, option1: string, option2: string, option3: string): int {
+func blank_options(first_piece: string, second_piece: string, option1: string, option2: string, option3: string) {
 	while true {
-	println("");
-	println(first_piece + "___" + second_piece);
-	println("1. " + option1);
-	println("2. " + option2);
-	println("3. " + option3);
+		println("");
+		println(first_piece + "___" + second_piece);
+		println("1. " + option1);
+		println("2. " + option2);
+		println("3. " + option3);
+	
+		var input = int(input("Choose an option: "));
 
-	var input = int(input("Choose an option: "));
-
-	var output = switch_block_options(true, input, first_piece + option1 + second_piece, 
-						       first_piece + option2 + second_piece, 
-						       first_piece + option3 + second_piece);
-	if output > -1 { return output; }
+		switch_options!(true, input, first_piece + option1 + second_piece, 
+									 first_piece + option2 + second_piece, 
+									 first_piece + option3 + second_piece);
 	}
+}
+
+defmacro switch_options($do_three, $input, $result1, $result2, $result3) {
+	if $input == 1 { println($result1); return; }
+	else if $input == 2 { println($result2); return; }
+	else if $input == 3 && $do_three { println($result3); return; }
+	else { println("Please choose a valid option"); return; }
 }
 
 func switch_block_options(do_three: bool, input_num: int, result1: string, result2: string, result3: string) : int {
@@ -47,5 +53,4 @@ func switch_block_options(do_three: bool, input_num: int, result1: string, resul
 	else if input_num == 2 { println(result2); return 2; }
 	else if input == 3 && do_three { println(result3); return 3; }
 	println("Please choose a valid option"); return -1;
-	
 } 

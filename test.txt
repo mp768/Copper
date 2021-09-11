@@ -1,7 +1,6 @@
 // This is a comment, wow!
 
-import "text_adventure_lib.txt";
-//import "text_adventure_game.txt";
+import_crap!();
 
 // these are the basic types:
 // any - can accept "any" value
@@ -10,6 +9,11 @@ import "text_adventure_lib.txt";
 // decimal - can accept any number almost
 // string - can accept "messages like this"
 // bool - has only two values, true or false 
+
+defmacro import_crap() {
+    import "text_adventure_lib.txt";
+    import "text_adventure_game.txt";
+}
 
 struct Vec2 {
     x, y
@@ -70,7 +74,7 @@ var vec4 = new Vec4;
 println(vec4);
 
 println(vec2);
-create_Window(vec2.z);
+//create_Window(vec2.z);
 
 
 // This is an example of a looping function.
@@ -114,7 +118,7 @@ struct hello {
     o
 }
 
-var uvar: uint = abs(-5);
+var uvar = abs(-5.3);
 println({
     if uvar == 5 {
         quit;

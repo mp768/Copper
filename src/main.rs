@@ -10,10 +10,12 @@ pub mod codegen;
 use std::io::{Write, stdin, stdout};
 
 use codegen::CopperGen;
-use mini_macros::tokenizer::MacroTokenizer;
+use mini_macros::tokenizer::{MacroDefs, MacroTokenizer};
 use parser::CopperParser;
 use value::{Value};
 use vm::VM;
+
+use crate::mini_macros::tokenizer::MacroExpander;
 
 fn copper_print(values: Vec<Value>) -> Value {
     let val = values[0].clone();
@@ -69,16 +71,8 @@ fn copper_abs(values: Vec<Value>) -> Value {
     match val {
         Value::None => return Value::Int(0),
         Value::Uint(x) => return Value::Uint(x),
-        Value::Int(x) => return Value::Int(if x < 0 {
-            -x
-        } else {
-            x
-        }),
-        Value::Decimal(x) => return Value::Decimal(if x < 0.0 {
-            -x
-        } else {
-            x
-        }),
+        Value::Int(x) => return Value::Int(x.abs()),
+        Value::Decimal(x) => return Value::Decimal(x.abs()),
         Value::Str(x) => return Value::Str(x),
         Value::Bool(_) => return Value::Bool(true),
         Value::Struct(_) => return Value::None,
@@ -126,11 +120,5 @@ fn main() {
     //    println!("{:?}", x);
     //}
 
-    let mut tokenizer = MacroTokenizer::new("test.txt".to_string());
-
-    while let Some(x) = tokenizer.new_token() {
-        println!("{:?}", x);
-    }
-
-    //vm.interpret();
+    vm.interpret();
 }
