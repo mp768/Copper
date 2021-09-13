@@ -2,8 +2,8 @@ use crate::environment::{EnvEntry, Environment};
 use crate::value::{ClassType, Value};
 use crate::chunk::{Chunk, OpCode};
 
-pub struct VM {
-    pub chunk: *const Chunk,
+pub struct VM<'a> {
+    pub chunk: &'a Chunk,
     pub idx: usize,
     pub stack: Vec<Value>,
     pub call_stack: Vec<Value>,
@@ -15,6 +15,7 @@ pub struct VM {
     pub function_return_types: Vec<ClassType>,
 }
 
+// Set of macros for making the repetitive task of comparing with binary less tedious.
 macro_rules! binary_compare {
     ($self:expr, $op:tt, $type:literal) => {
         binary_compare!(basic $self, $op, { panic!("Cannot compare for '{}' with 'string' type.", $type) }, { panic!("Cannot compare for '{}' with 'bool' type.", $type) }, $type)
@@ -53,13 +54,13 @@ macro_rules! binary_compare {
     };
 }
 
-impl VM {
-    pub fn new(chunk: *const Chunk) -> VM {
+impl<'a> VM<'a> {
+    pub fn new(chunk: &'a Chunk) -> VM {
         return VM { chunk, idx: 0, environment: Environment::new(), stack: Vec::new(), call_stack: Vec::new(), function_starting_scope: Vec::new(), function_jump_back: Vec::new(), function_return_types: Vec::new() }
     }
 
     fn read_op(&mut self) -> OpCode {
-        let result = unsafe { &(*self.chunk).code[self.idx] };
+        let result = self.chunk.code[self.idx].clone();
         self.idx += 1;
         return result.clone();
     }
@@ -75,7 +76,7 @@ impl VM {
         let b = self.stack_pop();
         let a = self.stack_pop();
 
-        let mut value_type: Value = Value::Uint(0);
+        let mut value_type: Value = Value::None;
 
         if value_type < a {
             value_type = a.clone();
@@ -89,20 +90,30 @@ impl VM {
     }
 
     pub fn interpret(&mut self) {
-        let debugging = false;
-        let debug_memory = false;
-        let debug_scope = false;
+        // These are set for debugging the internal process of the interpeter
+        const DEBUGGING: bool = false;
+
+        // This is set for debugging current amount of values used in memory.
+        const DEBUG_MEMORY: bool = false;
+
+        // If set to true, then it means it will print amount of values on the stack every 1000 objects.
+        // Turn to false if you want to see the amount of values for every op in the vm.
+        const DEBUG_MEMORY_LEN_1000: bool = false;
+
+        // Debug what the current scope of the vm enviroment is.
+        const DEBUG_SCOPE: bool = false;
         
         loop {
-            if debug_memory && self.stack.len() % 1000 == 0 {
+            if DEBUG_MEMORY && (!DEBUG_MEMORY_LEN_1000 || self.stack.len() % 1000 == 0) {
                 println!("Current amount of values on stack: {}", self.stack.len());
             }
 
-            if debug_scope {
+            if DEBUG_SCOPE {
                 println!("Current Scope: {}", self.environment.current_scope);
             }
 
-            if debugging {
+            // This is the full debugging experience.
+            if DEBUGGING {
                 println!("====");
                 println!("| Current Scope '{}'", self.environment.current_scope);
                 print!("| Stack [ ");
@@ -219,9 +230,9 @@ impl VM {
                     }
                 }
                 OpCode::NewStruct(name) => {
-                    self.stack.push(Value::Struct(unsafe { 
-                        (*self.chunk).functions.get_struct(name) 
-                    }));
+                    self.stack.push(Value::Struct(
+                        self.chunk.functions.get_struct(name) 
+                    ));
                 }
                 OpCode::TransformToType(ctype) => {
                     let val = self.stack_pop();
@@ -260,7 +271,7 @@ impl VM {
                     self.stack.push(a.div_s(&b));  
                 },
                 OpCode::CallFunc(func_name) => {
-                    let func = unsafe { (*self.chunk).functions.get_function(func_name.clone()) };
+                    let func = self.chunk.functions.get_function(func_name.clone());
 
                     match func {
                         EnvEntry::Function(_, ctype, count, bytecode_pos) => {

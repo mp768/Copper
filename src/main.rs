@@ -10,12 +10,9 @@ pub mod codegen;
 use std::io::{Write, stdin, stdout};
 
 use codegen::CopperGen;
-use mini_macros::tokenizer::{MacroDefs, MacroTokenizer};
 use parser::CopperParser;
 use value::{Value};
 use vm::VM;
-
-use crate::mini_macros::tokenizer::MacroExpander;
 
 fn copper_print(values: Vec<Value>) -> Value {
     let val = values[0].clone();
@@ -94,12 +91,14 @@ fn main() {
         //println!("copper [file names...]");
         //return;
         cmd_args.push(String::from("test.txt"));
-        //cmd_args.push(String::from("text_adventure_game.txt"));
-        //cmd_args.push(String::from("text_adventure_lib.txt"));
     }
 
 
     let mut gen = CopperGen::new();
+
+    gen.add_content("
+        var CONST_INT = 5;
+    ");
 
     let mut new_chunk = gen.generate_chunk(cmd_args);
 
@@ -113,12 +112,6 @@ fn main() {
     //new_chunk.disassemble();
 
     let mut vm = VM::new(&new_chunk);
-
-    //let mut parser = CopperParser::new("/".to_string());
-    //
-    //while let Some(x) = parser.parse() {
-    //    println!("{:?}", x);
-    //}
 
     vm.interpret();
 }

@@ -400,6 +400,11 @@ impl CopperGen {
         }
     }
 
+    pub fn add_content(&mut self, source: &str) {
+        self.parser = CopperParser::new(source.to_string());
+        self.generate_loop();
+    }
+
     pub fn generate_chunk(&mut self, files: Vec<String>) -> Chunk {
         self.macro_expander = MacroExpander::new(files.clone());
 

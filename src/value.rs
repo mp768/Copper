@@ -92,26 +92,11 @@ impl Value {
     }
 
     pub fn print_type(&self) {
-        match self {
-            Self::Int(_) => print!("int"),
-            Self::Uint(_) => print!("uint"),
-            Self::Decimal(_) => print!("decimal"),
-            Self::Bool(_) => print!("bool"),
-            Self::Str(_) => print!("string"),
-            Self::Struct(x) => print!("Struct('{}')", x.name),
-            Self::None => print!("none"),
-            //_ => print!("unknown value")
-        }
+        print!("{}", self.type_to_string());
     }
 
     pub fn println(&self) {
-        self.print();
-        println!();
-    }
-
-    pub fn debug_print(&self) {
-        print!("Value: ");
-        println!("{:?}", self);
+        self.print(); println!();
     }
 
     pub fn struct_s(&self, name: String) -> CopperStruct {

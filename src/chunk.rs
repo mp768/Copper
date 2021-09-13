@@ -65,6 +65,7 @@ impl Chunk {
         self.functions = Environment::new();
     }
 
+    // Base function that every opcode can implement from.
     pub fn write(&mut self, byte: OpCode, line: usize) {
         self.code.push(byte);
         self.lines.push(line);
@@ -122,12 +123,7 @@ impl Chunk {
         match op {
             OpCode::Return => print!("return"),
             OpCode::EndScript => print!("end script"),
-            OpCode::Push(value) => { 
-                print!("push '"); 
-                value.print(); 
-                print!("'    "); 
-                value.print_type();
-            },
+            OpCode::Push(value) => print!("push '{}'   {}", value.string_s(), value.type_to_string()),
             OpCode::Pop => print!("pop"),
             OpCode::Add => print!("add"),
             OpCode::Sub => print!("sub"),
@@ -159,7 +155,7 @@ impl Chunk {
             OpCode::StructSet(name, sets) => print!("struct set {}, {:?}", name, sets),
             OpCode::StructSetByIndex(index) => print!("set {} index of struct", index),
             OpCode::NewStruct(name) => print!("new set of structure {}", name),
-            // _ => println!("[Unknown opcode]"),
+            // _ => print!("[Unknown opcode]"),
         }
     }
 
