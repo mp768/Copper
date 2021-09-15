@@ -26,8 +26,7 @@ impl CopperStruct {
     }
 
     pub fn set(&mut self, names: Vec<String>, value: Value) {
-        let mut struct_place_holder = self.clone();
-        let mut structure = &mut struct_place_holder;
+        let mut structure = &mut self.clone();
 
         for i in 0..names.len()-1 {
             let name = names[i].clone();
@@ -49,7 +48,7 @@ impl CopperStruct {
         for i in 0..structure.field_names.len() {
             if structure.field_names[i] == names[names.len()-1] {
                 structure.field_values[i] = value.clone();
-                *self = struct_place_holder.clone();
+                *self = structure.clone();
                 return;
             }
         }
@@ -86,7 +85,8 @@ impl CopperStruct {
 }
 
 
-
+// Designed to hold entries like variables, functions, and structures for 
+// the vm and chunk.
 #[derive(Clone)]
 pub struct Environment {
     pub entries: Vec<EnvEntry>,

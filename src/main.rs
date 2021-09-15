@@ -10,10 +10,10 @@ pub mod codegen;
 use std::io::{Write, stdin, stdout};
 
 use codegen::CopperGen;
-use parser::CopperParser;
-use value::{Value};
+use value::Value;
 use vm::VM;
 
+// Example of making a rust function native ot copper
 fn copper_print(values: Vec<Value>) -> Value {
     let val = values[0].clone();
     val.print();
@@ -96,12 +96,13 @@ fn main() {
 
     let mut gen = CopperGen::new();
 
-    gen.add_content("
-        var CONST_INT = 5;
-    ");
+    /* This is an example of adding new source code to your scripts to have.
+       *   gen.add_content(" println(\"Hello, World!\"); "); 
+    */
 
     let mut new_chunk = gen.generate_chunk(cmd_args);
 
+    // Chunks can bind functions that are native to rust to copper
     new_chunk.bind_native_function("print".to_string(), 1, &copper_print);
     new_chunk.bind_native_function("println".to_string(), 1, &copper_println);
     new_chunk.bind_native_function("input".to_string(), 1, &copper_input);
