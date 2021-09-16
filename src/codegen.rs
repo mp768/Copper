@@ -11,6 +11,7 @@ pub struct CopperGen {
     pub chunk: Chunk,
     block_increment: usize,
     files: Vec<String>,
+    file_path: String,
     macro_expander: MacroExpander,
 }
 
@@ -300,18 +301,33 @@ impl CopperGen {
                 if let AstExpr::Literal(x) = &expr {
                     let val = x.string_s();
 
-                    if !self.files.iter().any(|x| *x == val) {
-                        self.files.push(val.clone());
+                    if !self.files.iter().any(|file| *file == self.file_path.clone() + val.as_str()) {
                         let current_parser = self.parser.clone();
-                        let current_macro_expander = self.macro_expander.clone();
-                        self.macro_expander = MacroExpander::new(vec![val.clone()]);
+                        
+                        let source = self.macro_expander.compile_with_path(val.clone(), self.file_path.clone());
+                        self.files.push(self.file_path.clone() + val.as_str());
 
-                        let source = self.macro_expander.compile();
+                        let previous_file_path = self.file_path.clone();
+                        self.file_path = {
+                            let mut new_string = self.file_path.clone();
+
+                            for i in val.split("/") {
+                                if i.contains("..") {
+                                    new_string.push_str(i);
+                                    new_string.push_str("/");
+                                } else if !i.contains(".") {
+                                    new_string.push_str(i);
+                                    new_string.push_str("/");
+                                }
+                            }
+                            new_string
+                        };
 
                         //std::fs::write(format!("{}_file.txt", val), source.clone());
                         self.parser = CopperParser::new(source);
-                        self.macro_expander = current_macro_expander;
                         self.generate_loop();
+
+                        self.file_path = previous_file_path;
                         self.parser = current_parser;
                     }
                 } else {
@@ -406,20 +422,36 @@ impl CopperGen {
     }
 
     pub fn generate_chunk(&mut self, files: Vec<String>) -> Chunk {
-        self.macro_expander = MacroExpander::new(files.clone());
-
         for i in files {
-            self.files.push(i);
+            if !self.files.contains(&i) {
+                self.file_path = {
+                    let mut new_string = String::with_capacity(i.capacity());
+                    let mut paths: Vec<&str> = Vec::new();
+                    for j in i.split("/") {
+                        if j.to_string().contains("..") {
+                            paths.push(j);
+                        }
+                        else if !j.to_string().contains(".") {
+                            paths.push(j);
+                        }
+                    }
+
+                    for j in paths {
+                        new_string.push_str(j);
+                        new_string.push_str("/");
+                    }
+
+                    new_string
+                };
+
+                self.macro_expander = MacroExpander::new(vec![i.clone()]);
+                let source = self.macro_expander.compile();
+                        
+                self.parser = CopperParser::new(source);
+                self.generate_loop();
+                self.files.push(i);
+            } 
         }
-
-        let source = self.macro_expander.compile();
-
-        //std::fs::write("file.txt", source.clone());
-
-        let source = source;
-                
-        self.parser = CopperParser::new(source);
-        self.generate_loop();
         
         self.chunk.write(OpCode::EndScript, self.current_line);
         
@@ -437,6 +469,7 @@ impl CopperGen {
             chunk: Chunk::new(),
             block_increment: 0,
             files: Vec::new(),
+            file_path: String::new(),
             macro_expander: MacroExpander::new(Vec::new()),
         }
     }

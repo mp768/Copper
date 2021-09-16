@@ -1,5 +1,0 @@
-add macros of some sort. [X]
-* macros would require me to make a new "language" to do basic text replacement.
-* but it would allow me to do very cool things in the language, like a switch block.
-
-at least I got one todo done, I'm closing it up now.

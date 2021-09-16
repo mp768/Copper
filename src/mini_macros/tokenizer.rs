@@ -594,6 +594,19 @@ impl MacroExpander {
         }
     }
 
+    pub fn compile_with_path(&mut self, file: String, path: String) -> String {
+        let previous_defs = self.defs.clone();
+
+        self.defs = MacroDefs::new(vec![path + file.as_str()]);
+        self.defs.compile();
+        self.final_source = String::with_capacity(self.defs.file_content.len() + self.defs.defines.len());
+
+        self.expand();
+
+        self.defs = previous_defs;
+        return self.final_source.clone();
+    }
+
     pub fn compile(&mut self) -> String {
         self.defs.compile();
         self.final_source = String::with_capacity(self.defs.file_content.len() + self.defs.defines.len());

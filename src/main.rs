@@ -11,6 +11,7 @@ use std::io::{Write, stdin, stdout};
 
 use codegen::CopperGen;
 use value::Value;
+use parser::CopperParser;
 use vm::VM;
 
 // Example of making a rust function native ot copper
@@ -90,9 +91,8 @@ fn main() {
     if cmd_args.len() == 0 {
         //println!("copper [file names...]");
         //return;
-        cmd_args.push(String::from("test.txt"));
+        cmd_args.push(String::from("tests/test.txt"));
     }
-
 
     let mut gen = CopperGen::new();
 
